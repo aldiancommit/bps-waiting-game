@@ -1,41 +1,39 @@
 import Phaser from 'phaser';
+import { BlockPuzzleScene } from './game/BlockPuzzleScene.js';
+
+/**
+ * BPS Waiting Game - Main Entry Point
+ * Modern Neumorphic / Dark Mode visual design
+ */
 
 const config = {
     type: Phaser.AUTO,
     width: 360,
     height: 640,
+    parent: document.body,
+    backgroundColor: '#ffffffff',
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
+    render: {
+        antialias: true,
+        pixelArt: false,
+        roundPixels: false,
+        powerPreference: 'high-performance'
     },
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
-    }
+    input: {
+        activePointers: 2
+    },
+    scene: BlockPuzzleScene
 };
 
-const game = new Phaser.Game(config);
-
-function preload() {
-    // Tempat load gambar/suara nanti
-}
-
-function create() {
-    // Teks uji coba awal
-    this.add.text(180, 320, 'Game BPS Ready!', {
-        fontSize: '24px',
-        color: '#ffffff'
-    }).setOrigin(0.5);
-}
-
-function update() {
-    // Logic per-frame
+if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+        new Phaser.Game(config);
+    });
+} else {
+    window.addEventListener('load', () => {
+        new Phaser.Game(config);
+    });
 }
