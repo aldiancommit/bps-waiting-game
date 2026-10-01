@@ -3,7 +3,7 @@ import { BlockPuzzleScene } from './game/BlockPuzzleScene.js';
 
 /**
  * BPS Waiting Game - Main Entry Point
- * Modern Neumorphic / Dark Mode visual design
+ * Pixel Art Theme
  */
 
 const config = {
@@ -11,15 +11,15 @@ const config = {
     width: 360,
     height: 640,
     parent: document.body,
-    backgroundColor: '#ffffffff',
+    backgroundColor: '#F1F5F9',
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     render: {
-        antialias: true,
-        pixelArt: false,
-        roundPixels: false,
+        antialias: false,
+        pixelArt: true,
+        roundPixels: true,
         powerPreference: 'high-performance'
     },
     input: {
