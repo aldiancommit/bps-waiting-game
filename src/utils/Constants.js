@@ -1,12 +1,19 @@
 /**
  * Game constants for 1010 Block Puzzle.
- * Pixel Art Theme — Flat Clean
+ * Clean White Theme — Glossy Blocks
+ *
+ * All spatial values are in logical pixels (360×640 coordinate space).
+ * High-DPI rendering is handled by camera zoom — no manual DPR scaling needed here.
  */
+
+export const DPR = typeof window !== 'undefined'
+    ? Math.min(window.devicePixelRatio || 1, 3)
+    : 1;
 
 // [TAG: PENGATURAN KOTAK GRID]
 export const GRID_SIZE = 10;     // Jumlah grid (10x10)
 export const CELL_SIZE = 31;     // Ukuran fisik 1 kotak grid (pixel)
-export const CELL_GAP = 3;       // Jarak spasi antar kotak (pixel)
+export const CELL_GAP = 4;       // Jarak spasi antar kotak (pixel)
 export const GRID_STEP = CELL_SIZE + CELL_GAP; // Total ukuran per sel
 
 // [TAG: PENGATURAN UKURAN DAN POSISI PAPAN]
@@ -38,27 +45,25 @@ export const STORAGE_KEYS = {
 
 // [TAG: FONT]
 export const FONT_PIXEL = "'Press Start 2P', monospace";
-export const FONT_POPPINS = "'Poppins', system-ui, sans-serif";
-export const FONT_RETRO = "'Press Start 2P', monospace";
 
 // [TAG: PENGATURAN TEMA WARNA UTAMA]
 export const C = {
     // [TAG: WARNA BACKGROUND]
     BG_BASE: 0xF1F5F9,
 
-    // [TAG: WARNA PAPAN GRID]
-    CELL_EMPTY: 0xe2e8f0, // Warna kotak kosong abu-abu terang
+    // [TAG: WARNA PAPAN GRID — abu-abu terang, tidak gelap]
+    CELL_EMPTY: 0xe2e8f0,     // Abu-abu terang untuk kotak kosong
+    CELL_BORDER: 0xd1d5db,    // Border kotak lebih halus
 
     // [TAG: WARNA KOTAK HEADER & SLOT]
     PILL_BG: 0xffffff,
-    PILL_LABEL: 0x64748b,
-    SCORE_VAL: 0x3A5192,
-    BEST_LABEL: 0xf59e0b,
+    SCORE_VAL: '#1e293b',     // Teks skor — gelap
+    BEST_VAL: '#b45309',      // Teks best — emas gelap
 
-    // [TAG: WARNA POPUP GAME OVER]
-    OVERLAY_DIM: 0xffffff,
+    // [TAG: WARNA POPUP GAME OVER & PAUSE]
     CARD_BG: 0xffffff,
-    CARD_BORDER: 0x3A5192,
+    CARD_BORDER: 0xd1d5db,
     BTN_BG: 0x3A5192,
-    BTN_BORDER: 0x6B82C4,
+    BTN_GREEN: 0x22c55e,
+    BTN_RED: 0xf43f5e,
 };
