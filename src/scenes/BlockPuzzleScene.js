@@ -127,18 +127,18 @@ export class BlockPuzzleScene extends Phaser.Scene {
             .setOrigin(0, 0.5)
             .setDepth(25);
 
-        // 2. Teks Grup BPS (di samping logo BPS, font modern sans-serif non-pixel resolusi tinggi)
+        // 2. Teks Grup BPS (di samping logo BPS, font Inter resolusi tinggi)
         this.bpsTitle = this.add.text(58, topY - 7, 'BPS', {
             fontFamily: FONT_UI,
-            fontSize: '15px',
-            fontWeight: '800',
+            fontSize: '16px',
+            fontWeight: '900',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
         this.bpsSubtitle = this.add.text(58, topY + 7, 'Badan Pusat Statistik', {
             fontFamily: FONT_UI,
             fontSize: '9.5px',
-            fontWeight: '700',
+            fontWeight: '400',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 

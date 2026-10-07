@@ -47,8 +47,10 @@ if (document.fonts && document.fonts.load) {
     Promise.race([
         Promise.all([
             document.fonts.load('10px "Public Pixel"'),
-            document.fonts.load('800 15px "Plus Jakarta Sans"'),
-            document.fonts.load('700 10px "Plus Jakarta Sans"'),
+            document.fonts.load('900 16px "Inter"'),
+            document.fonts.load('800 16px "Inter"'),
+            document.fonts.load('400 10px "Inter"'),
+            document.fonts.load('500 10px "Inter"'),
             document.fonts.ready
         ]),
         new Promise(resolve => setTimeout(resolve, 1500))
