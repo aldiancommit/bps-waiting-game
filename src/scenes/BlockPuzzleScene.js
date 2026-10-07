@@ -562,30 +562,29 @@ export class BlockPuzzleScene extends Phaser.Scene {
     _shakeCrown(intensity = 'small') {
         this.tweens.killTweensOf(this.crownIcon);
         if (intensity === 'big') {
-            // Line clear: goyang kencang + membesar
+            // Line clear / match: goyang gembira tetap konsisten di ukuran 0.05
             this.tweens.add({
                 targets: this.crownIcon,
-                angle: { from: -12, to: 12 },
-                scaleX: 0.09, scaleY: 0.09,
-                yoyo: true, repeat: 2, duration: 80,
+                angle: { from: -10, to: 10 },
+                scaleX: 0.055, scaleY: 0.055,
+                yoyo: true, repeat: 2, duration: 75,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
                     this.crownIcon.setAngle(0);
-                    this.tweens.add({
-                        targets: this.crownIcon,
-                        scaleX: 0.06, scaleY: 0.06,
-                        duration: 150, ease: 'Back.easeOut'
-                    });
+                    this.crownIcon.setScale(0.05);
                 }
             });
         } else {
-            // Place tanpa clear: goyang kecil
+            // Place tanpa clear: goyang kecil tetap di ukuran 0.05
             this.tweens.add({
                 targets: this.crownIcon,
                 angle: { from: -4, to: 4 },
                 yoyo: true, repeat: 1, duration: 60,
                 ease: 'Sine.easeInOut',
-                onComplete: () => this.crownIcon.setAngle(0)
+                onComplete: () => {
+                    this.crownIcon.setAngle(0);
+                    this.crownIcon.setScale(0.05);
+                }
             });
         }
     }
@@ -1765,12 +1764,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this.highScore = this.score;
             saveHighScore(this.highScore);
 
-            // Efek: mahkota berkedip saat rekor terlampaui
+            // Efek: mahkota berkedip saat rekor terlampaui (tetap kembali ke 0.05)
             this.tweens.add({
                 targets: this.crownIcon,
-                scaleX: 0.12, scaleY: 0.12,
+                scaleX: 0.065, scaleY: 0.065,
                 yoyo: true, duration: 150,
-                ease: 'Back.easeOut'
+                ease: 'Back.easeOut',
+                onComplete: () => this.crownIcon.setScale(0.05)
             });
         }
         this._syncScoreUI();
