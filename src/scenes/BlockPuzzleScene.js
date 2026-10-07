@@ -131,14 +131,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.bpsTitle = this.add.text(58, topY - 7, 'BPS', {
             fontFamily: FONT_UI,
             fontSize: '16px',
-            fontWeight: '900',
+            fontStyle: '750',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
         this.bpsSubtitle = this.add.text(58, topY + 7, 'Badan Pusat Statistik', {
             fontFamily: FONT_UI,
             fontSize: '9.5px',
-            fontWeight: '400',
+            fontStyle: '300',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
@@ -955,9 +955,6 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const placeScore = this.isFeverActive ? basePlaceScore * 2 : basePlaceScore;
         this._addScore(placeScore);
 
-        // Charge Fever meter on placement
-        this._updateFever(5);
-
         // Tactile micro-shake on placing piece
         this.cameras.main.shake(35, 0.0008);
 
@@ -1019,9 +1016,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     _detonateBombs(bombList) {
+        if (!bombList || bombList.length === 0) return false;
+
         const cellsToBlast = new Set();
+        const chainedBombs = [];
 
         bombList.forEach(({ col, row }) => {
+            cellsToBlast.add(`${row},${col}`);
             for (let dr = -1; dr <= 1; dr++) {
                 for (let dc = -1; dc <= 1; dc++) {
                     const nr = row + dr;
@@ -1029,19 +1030,24 @@ export class BlockPuzzleScene extends Phaser.Scene {
                     if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
                         if (this.board[nr][nc] !== null) {
                             cellsToBlast.add(`${nr},${nc}`);
+                            // Deteksi jika ada bom sekunder di radius ledakan
+                            if (this.boardSpecial[nr][nc] === 'bomb' && !(nr === row && nc === col)) {
+                                if (!bombList.some(b => b.col === nc && b.row === nr) &&
+                                    !chainedBombs.some(b => b.col === nc && b.row === nr)) {
+                                    chainedBombs.push({ col: nc, row: nr });
+                                }
+                            }
                         }
                     }
                 }
             }
         });
 
-        if (cellsToBlast.size === 0) return false;
-
         this.audio.playBombExplosion();
         triggerHaptic([50, 50, 80]);
         this.cameras.main.shake(250, 0.012);
 
-        const baseBombScore = cellsToBlast.size * 15;
+        const baseBombScore = Math.max(1, cellsToBlast.size) * 15;
         const bombScore = this.isFeverActive ? baseBombScore * 2 : baseBombScore;
         this._addScore(bombScore);
         this._updateFever(20);
@@ -1069,6 +1075,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this._renderBoardFills();
         clearedCells.forEach(([x, y, colorNum]) => this._spawnBombBlastParticle(x, y, colorNum));
+
+        // Rantai ledakan berantai untuk bom sekunder
+        if (chainedBombs.length > 0) {
+            this.time.delayedCall(120, () => {
+                this._detonateBombs(chainedBombs);
+            });
+        }
 
         this.tweens.add({
             targets: flash,
@@ -1258,8 +1271,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const lineScore = this.isFeverActive ? baseLineScore * 2 : baseLineScore;
         this._addScore(lineScore);
 
-        // Charge Fever Gauge on match / combo
-        this._updateFever(this.comboStreak > 1 ? 25 : 15);
+        // Charge Fever Gauge on match / combo (scales with match cluster size and combo streak)
+        const feverGain = Math.min(45, 12 + toClear.size * 3 + (this.comboStreak > 1 ? (this.comboStreak - 1) * 8 : 0));
+        this._updateFever(feverGain);
 
         // Dynamic and juicy camera shake
         if (this.comboStreak > 1) {
@@ -1282,14 +1296,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const clearedCells = [];
         const bombsTriggered = [];
 
+        // 1. Kumpulkan semua bom yang ikut terhapus atau berdampingan SEBELUM sel dikosongkan
         toClear.forEach(key => {
             const [r, c] = key.split(',').map(Number);
-            const x = GRID_START_X + c * GRID_STEP;
-            const y = GRID_START_Y + r * GRID_STEP;
-            
-            const colorNum = this.board[r][c] || 0xcbd5e1;
-
-            // Deteksi jika sel yang dibersihkan atau tetangganya adalah bom
             const dirs = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]];
             for (const [dr, dc] of dirs) {
                 const nr = r + dr;
@@ -1302,6 +1311,15 @@ export class BlockPuzzleScene extends Phaser.Scene {
                     }
                 }
             }
+        });
+
+        // 2. Kosongkan sel yang di-match dan render efek kilau putih
+        toClear.forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            const x = GRID_START_X + c * GRID_STEP;
+            const y = GRID_START_Y + r * GRID_STEP;
+            
+            const colorNum = this.board[r][c] || 0xcbd5e1;
 
             flash.fillStyle(0xffffff, 0.7);
             flash.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
@@ -1650,7 +1668,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _checkGameOver() {
         if (this.slotPieces.every(piece => piece === null)) {
-            this._triggerGameOver();
+            this.spawnSlotPieces();
             return;
         }
 
