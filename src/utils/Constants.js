@@ -17,10 +17,10 @@ export const CELL_GAP = 4;       // Jarak spasi antar kotak (pixel)
 export const GRID_STEP = CELL_SIZE + CELL_GAP; // Total ukuran per sel
 
 // [TAG: PENGATURAN UKURAN DAN POSISI PAPAN]
-export const BOARD_X = 10;       // Posisi papan dari kiri (X)
-export const BOARD_Y = 126;      // Posisi papan dari atas (Y) - diturunkan untuk memberi ruang header
-export const BOARD_W = 340;      // Lebar total papan
-export const BOARD_H = 340;      // Tinggi total papan
+export const BOARD_X = 7;        // Posisi papan dari kiri (X) - simetris di layar 360px
+export const BOARD_Y = 142;      // Posisi papan dari atas (Y) - diturunkan memberi ruang header atas luas bagi logo BPS
+export const BOARD_W = 346;      // Lebar total papan (10*31 + 9*4)
+export const BOARD_H = 346;      // Tinggi total papan
 
 // Grid inner origin
 export const GRID_START_X = BOARD_X;
@@ -32,9 +32,9 @@ export const FINGER_OFFSET_Y = -85;
 
 // [TAG: PENGATURAN 3 BALOK PILIHAN (SLOT BAWAH)]
 export const SLOT_CONFIG = [
-    { x: 67, y: 540, boxX: 20, boxY: 492, width: 94, height: 94 },
-    { x: 180, y: 540, boxX: 133, boxY: 492, width: 94, height: 94 },
-    { x: 293, y: 540, boxX: 246, boxY: 492, width: 94, height: 94 }
+    { x: 65, y: 550, boxX: 15, boxY: 502, width: 100, height: 96 },
+    { x: 180, y: 550, boxX: 130, boxY: 502, width: 100, height: 96 },
+    { x: 295, y: 550, boxX: 245, boxY: 502, width: 100, height: 96 }
 ];
 // [TAG: SKALA BALOK DI SLOT]
 export const SLOT_SCALE = 0.52;

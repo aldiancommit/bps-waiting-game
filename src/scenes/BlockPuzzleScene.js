@@ -104,10 +104,10 @@ export class BlockPuzzleScene extends Phaser.Scene {
         g.fillRect(0, 0, 360, 640);
     }
 
-    // ── Header: Audio Toggle — Score — Crown/Logo — Best — Pause ────────────────
+    // ── Header: Audio Toggle — Score Value — Crown — Best Score Value — Pause ────────────────
 
     _buildHeader() {
-        const centerY = 50;
+        const centerY = 66; // Diturunkan memberi headroom atas bersih bagi logo & text BPS
 
         // 1. Tombol Audio (kiri)
         this.audioBtn = this.add.container(32, centerY).setDepth(25);
@@ -144,32 +144,24 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this._floatText(isMuted ? 'SUARA: MATI' : 'SUARA: AKTIF', 40, 75);
         });
 
-        // 2. Score (kiri-tengah)
+        // 2. Score Value (kiri-tengah) — Teks angka saja, jernih & tajam tanpa label blur
         const scoreBoxX = 100;
-        this.add.text(scoreBoxX, centerY - 14, 'SKOR', {
-            fontFamily: FONT_PIXEL, fontSize: '5px',
-            color: '#94a3b8'
-        }).setOrigin(0.5, 0.5).setResolution(4);
-
-        this.scoreValueText = this.add.text(scoreBoxX, centerY + 5, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '15px',
+        this.scoreValueText = this.add.text(scoreBoxX, centerY, '0', {
+            fontFamily: FONT_PIXEL,
+            fontSize: '20px',
             color: C.SCORE_VAL
         }).setOrigin(0.5, 0.5).setResolution(4);
 
-        // 3. Mahkota / Logo Center
+        // 3. Mahkota / Crown Icon (tengah)
         this.crownIcon = this.add.image(180, centerY, 'mahkota')
-            .setScale(0.065)
+            .setScale(0.07)
             .setOrigin(0.5, 0.5);
 
-        // 4. Skor Terbaik (kanan-tengah)
+        // 4. Skor Terbaik Value (kanan-tengah) — Teks angka saja, jernih & tajam
         const bestBoxX = 260;
-        this.add.text(bestBoxX, centerY - 14, 'TERBAIK', {
-            fontFamily: FONT_PIXEL, fontSize: '5px',
-            color: '#94a3b8'
-        }).setOrigin(0.5, 0.5).setResolution(4);
-
-        this.highScoreValueText = this.add.text(bestBoxX, centerY + 5, `${this.highScore}`, {
-            fontFamily: FONT_PIXEL, fontSize: '15px',
+        this.highScoreValueText = this.add.text(bestBoxX, centerY, `${this.highScore}`, {
+            fontFamily: FONT_PIXEL,
+            fontSize: '20px',
             color: C.BEST_VAL
         }).setOrigin(0.5, 0.5).setResolution(4);
 
@@ -240,9 +232,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Fever / Hyper Gauge UI ──────────────────────────────
 
     _buildFeverGauge() {
-        this.feverContainer = this.add.container(180, 94).setDepth(20);
+        this.feverContainer = this.add.container(180, 108).setDepth(20);
 
-        const trackW = 250, trackH = 8;
+        const trackW = 250, trackH = 9;
         const trackX = -trackW / 2, trackY = -trackH / 2;
 
         this.feverTrackGraphics = this.add.graphics();
@@ -255,9 +247,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.feverBarGraphics = this.add.graphics();
         this.feverContainer.add(this.feverBarGraphics);
 
-        this.feverLabel = this.add.text(0, -9, 'FEVER GAUGE', {
+        this.feverLabel = this.add.text(0, -11, 'FEVER GAUGE', {
             fontFamily: FONT_PIXEL,
-            fontSize: '5px',
+            fontSize: '7px',
             color: '#94a3b8'
         }).setOrigin(0.5, 0.5).setResolution(4);
         this.feverContainer.add(this.feverLabel);
@@ -270,7 +262,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _drawFeverBar() {
         this.feverBarGraphics.clear();
-        const trackW = 250, trackH = 8;
+        const trackW = 250, trackH = 9;
         const trackX = -trackW / 2, trackY = -trackH / 2;
         const pct = Math.max(0, Math.min(100, this.feverGauge)) / 100;
         const fillW = Math.max(0, (trackW - 2) * pct);
@@ -282,14 +274,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
                 this.feverBarGraphics.fillStyle(0xfef08a, 0.55);
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, (trackH - 2) / 2, { tl: 3, tr: 3, bl: 0, br: 0 });
-                this.feverLabel.setText(`🔥 FEVER 2X (${this.feverTurnsLeft} MOVES) 🔥`).setColor('#ea580c');
+                this.feverLabel.setText(`🔥 FEVER 2X (${this.feverTurnsLeft} GERAKAN) 🔥`).setColor('#ea580c');
             } else {
                 // Blue to Amber charging bar
                 this.feverBarGraphics.fillStyle(pct >= 0.8 ? 0xf59e0b : 0x3b82f6, 1);
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
                 this.feverBarGraphics.fillStyle(0xffffff, 0.3);
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, (trackH - 2) / 2, { tl: 3, tr: 3, bl: 0, br: 0 });
-                this.feverLabel.setText(pct >= 1 ? '⚡ FEVER READY! ⚡' : 'FEVER GAUGE').setColor(pct >= 0.8 ? '#d97706' : '#94a3b8');
+                this.feverLabel.setText(pct >= 1 ? '⚡ FEVER SIAP! ⚡' : 'FEVER GAUGE').setColor(pct >= 0.8 ? '#d97706' : '#94a3b8');
             }
         } else {
             this.feverLabel.setText('FEVER GAUGE').setColor('#94a3b8');
@@ -1149,11 +1141,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
             }
         }
 
-        if (hasRainbowInMatch && matchedCells.size > 0) {
-            this.audio.playRainbowMatch();
-        }
-
-        return matchedCells;
+        return { matchedCells, hasRainbow: hasRainbowInMatch };
     }
 
     _resolveMatches() {
@@ -1161,25 +1149,28 @@ export class BlockPuzzleScene extends Phaser.Scene {
         let guard = GRID_SIZE * GRID_SIZE;
 
         while (guard-- > 0) {
-            const toClear = this._findMatchCells();
-            if (toClear.size === 0) {
+            const { matchedCells, hasRainbow } = this._findMatchCells();
+            if (matchedCells.size === 0) {
                 if (!matched) this.comboStreak = 0;
                 break;
             }
-            this._clearMatchedCells(toClear);
+            this._clearMatchedCells(matchedCells, hasRainbow);
             matched = true;
         }
 
         return matched;
     }
 
-    _clearMatchedCells(toClear) {
+    _clearMatchedCells(toClear, hasRainbow = false) {
         if (toClear.size === 0) {
             this.comboStreak = 0;
             return false;
         }
 
         this.comboStreak++;
+        if (hasRainbow) {
+            this.audio.playRainbowMatch();
+        }
         this.audio.playLineClear(this.comboStreak);
         if (this.comboStreak > 1) {
             this.audio.playCombo(this.comboStreak);
