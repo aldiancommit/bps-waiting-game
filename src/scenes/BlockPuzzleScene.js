@@ -2026,14 +2026,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
             iconG.fillStyle(0x1e293b, 1);
             iconG.fillTriangle(-5, -10, -5, 10, 8, 0);
         } else if (type === 'restart') {
-            // Pure geometric Circular Reload Arrow pointing clockwise forward
-            iconG.lineStyle(2.8, 0x1e293b, 1);
-            iconG.beginPath();
-            iconG.arc(0, 0, 10.5, -Math.PI * 0.45, Math.PI * 1.1, false);
-            iconG.strokePath();
-            // Arrow head pointing forward clockwise
-            iconG.fillStyle(0x1e293b, 1);
-            iconG.fillTriangle(6, -10.5, 0, -15, 0, -6);
+            // Gambar Ikon Restart/Refresh Geometris Murni
+            this._drawRestartIcon(iconG, 0, 0, 11, 0x1e293b, 3.2);
         } else if (type === 'audio') {
             this.pauseAudioIconGraphics = iconG;
             this._drawCardAudioIcon();
@@ -2087,6 +2081,29 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this.pauseAudioIconGraphics.arc(0, 0, 12, -Math.PI / 3, Math.PI / 3, false);
             this.pauseAudioIconGraphics.strokePath();
         }
+    }
+
+    /**
+     * Menggambar ikon 'restart/refresh' geometris presisi menggunakan Phaser Graphics.
+     */
+    _drawRestartIcon(graphics, x, y, radius = 11, color = 0x1e293b, lineThickness = 3.2) {
+        // 1. Gambar Busur Lingkaran (Arc)
+        graphics.lineStyle(lineThickness, color, 1);
+        graphics.beginPath();
+        graphics.arc(x, y, radius, -Math.PI * 0.2, Math.PI * 1.35, false);
+        graphics.strokePath();
+
+        // 2. Gambar Kepala Panah (Arrowhead) di ujung busur
+        const arrowEndX = x + Math.cos(Math.PI * 1.35) * radius;
+        const arrowEndY = y + Math.sin(Math.PI * 1.35) * radius;
+
+        graphics.fillStyle(color, 1);
+        graphics.beginPath();
+        graphics.moveTo(arrowEndX - 2, arrowEndY - 6);
+        graphics.lineTo(arrowEndX + 6, arrowEndY + 2);
+        graphics.lineTo(arrowEndX - 6, arrowEndY + 4);
+        graphics.closePath();
+        graphics.fillPath();
     }
 
     _togglePause(paused) {
