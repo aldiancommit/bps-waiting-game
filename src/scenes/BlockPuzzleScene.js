@@ -62,12 +62,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this.slotPieces = [null, null, null];
         this.slotContainers = [null, null, null];
+        this.unlockedMilestones = new Set();
 
         this._buildBackground();
         this._buildHeader();
         this._buildBoard();
         this._buildSlotCards();
         this._buildGhostLayer();
+        this._buildMilestoneBanner();
         this._buildGameOverOverlay();
         this._buildPauseOverlay();
         this._setupInput();
@@ -557,6 +559,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this._renderBoardFills();
         this._addScore(shapeData.cells.length);
 
+        // Tactile micro-shake on placing piece
+        this.cameras.main.shake(35, 0.0008);
+
         this._spawnPlaceParticles(targetCol, targetRow, shapeData);
 
         container.destroy();
@@ -685,15 +690,24 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
 
         this.comboStreak++;
-        this.audio.playLineClear(1);
+        this.audio.playLineClear(this.comboStreak);
+        if (this.comboStreak > 1) {
+            this.audio.playCombo(this.comboStreak);
+        }
         triggerHaptic(toClear.size >= 5 ? [30, 40, 60] : 30);
 
         const comboBonus = (this.comboStreak > 1) ? this.comboStreak * 5 : 0;
         const lineScore = (toClear.size * 10) + comboBonus;
         this._addScore(lineScore);
 
-        // Shake lebih mulus / tidak heboh
-        this.cameras.main.shake(80, toClear.size >= 5 ? 0.003 : 0.001);
+        // Dynamic and juicy camera shake
+        if (this.comboStreak > 1) {
+            this.cameras.main.shake(160, 0.006 + Math.min(0.010, this.comboStreak * 0.002));
+        } else if (toClear.size >= 5) {
+            this.cameras.main.shake(140, 0.0055);
+        } else {
+            this.cameras.main.shake(90, 0.0025);
+        }
 
         if (toClear.size >= 5) {
             this._floatText(`WOW! ${toClear.size} MATCH!`, 180, 260);
@@ -927,37 +941,43 @@ export class BlockPuzzleScene extends Phaser.Scene {
         if (numCells === 1) {
             assignedColors.push(primaryColor);
         } else if (numCells === 2) {
-            // 65% same color (A, A) - valid (<= 2), 35% distinct (A, B)
-            if (Math.random() < 0.65) {
-                assignedColors.push(primaryColor, primaryColor);
-            } else {
+            // 75% distinct (A, B) for vibrant visual variety, 25% pair (A, A)
+            if (Math.random() < 0.75) {
                 assignedColors.push(primaryColor, secondaryColor);
+            } else {
+                assignedColors.push(primaryColor, primaryColor);
             }
         } else if (numCells === 3) {
             // NEVER (A, A, A)! Max 2 of same color.
-            // 75% (A, A, B)
-            // 25% (A, B, C)
-            if (Math.random() < 0.75) {
-                assignedColors.push(primaryColor, primaryColor, secondaryColor);
-            } else {
+            // 65% (A, B, C) for colorful richness
+            // 35% (A, A, B)
+            if (Math.random() < 0.65) {
                 assignedColors.push(primaryColor, secondaryColor, tertiaryColor);
+            } else {
+                assignedColors.push(primaryColor, primaryColor, secondaryColor);
             }
         } else if (numCells === 4) {
             // NEVER 3+ of same color! Max 2 of any color.
-            // 55% (A, A, B, B)
-            // 35% (A, A, B, C)
-            // 10% (A, B, C, D)
+            // 50% (A, B, C, D) 4 distinct colors
+            // 40% (A, A, B, C) 1 pair + 2 distinct
+            // 10% (A, A, B, B) 2 pairs
             const roll = Math.random();
-            if (roll < 0.55) {
-                assignedColors.push(primaryColor, primaryColor, secondaryColor, secondaryColor);
+            if (roll < 0.50) {
+                assignedColors.push(primaryColor, secondaryColor, tertiaryColor, quaternaryColor);
             } else if (roll < 0.90) {
                 assignedColors.push(primaryColor, primaryColor, secondaryColor, tertiaryColor);
             } else {
-                assignedColors.push(primaryColor, secondaryColor, tertiaryColor, quaternaryColor);
+                assignedColors.push(primaryColor, primaryColor, secondaryColor, secondaryColor);
             }
         } else {
-            // 5 cells: (A, A, B, B, C) - max 2 per color!
-            assignedColors.push(primaryColor, primaryColor, secondaryColor, secondaryColor, tertiaryColor);
+            // 5 cells: 60% 5 distinct colors (A, B, C, D, E), 40% (A, A, B, C, D)
+            const fifthOptions = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id && c.id !== secondaryColor.id && c.id !== tertiaryColor.id && c.id !== quaternaryColor.id);
+            const fifthColor = fifthOptions.length > 0 ? fifthOptions[0] : secondaryColor;
+            if (Math.random() < 0.60) {
+                assignedColors.push(primaryColor, secondaryColor, tertiaryColor, quaternaryColor, fifthColor);
+            } else {
+                assignedColors.push(primaryColor, primaryColor, secondaryColor, tertiaryColor, quaternaryColor);
+            }
         }
 
         // Strict Safety Guard: ensure no color appears more than 2 times
@@ -1260,6 +1280,23 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
         this._syncScoreUI();
 
+        // Check Stage Milestones
+        const MILESTONES = [
+            { score: 500, title: 'STAGE 1 CLEARED!', subtitle: 'PEMULA HEBAT!', icon: 'star', color: 0xf59e0b, textColor: '#d97706' },
+            { score: 1000, title: 'STAGE 2 CLEARED!', subtitle: 'AHLI STRATEGI BPS!', icon: 'trophy', color: 0xeab308, textColor: '#b45309' },
+            { score: 2500, title: 'STAGE 3 CLEARED!', subtitle: 'MASTER PUZZLE!', icon: 'rocket', color: 0x3b82f6, textColor: '#1d4ed8' },
+            { score: 5000, title: 'STAGE 4 CLEARED!', subtitle: 'RAJA BALOK BPS!', icon: 'crown', color: 0xa855f7, textColor: '#7e22ce' },
+            { score: 10000, title: 'STAGE 5 CLEARED!', subtitle: 'LEGENDA 1010!', icon: 'diamond', color: 0x06b6d4, textColor: '#0e7490' }
+        ];
+
+        for (const ms of MILESTONES) {
+            if (this.score >= ms.score && !this.unlockedMilestones.has(ms.score)) {
+                this.unlockedMilestones.add(ms.score);
+                this._showMilestoneBanner(ms);
+                break;
+            }
+        }
+
         // Efek: score pop animation
         this.tweens.killTweensOf(this.scoreValueText);
         this.scoreValueText.setScale(1.3);
@@ -1267,6 +1304,156 @@ export class BlockPuzzleScene extends Phaser.Scene {
             targets: this.scoreValueText,
             scaleX: 1, scaleY: 1,
             duration: 200, ease: 'Back.easeOut'
+        });
+    }
+
+    // ── Stage / Milestone Celebrations ───────────────────────
+
+    _buildMilestoneBanner() {
+        this.milestoneContainer = this.add.container(180, 200).setDepth(90).setVisible(false);
+
+        // Background Card
+        this.milestoneBg = this.add.graphics();
+        this.milestoneContainer.add(this.milestoneBg);
+
+        // Pixel Icon Graphic
+        this.milestoneIcon = this.add.graphics();
+        this.milestoneContainer.add(this.milestoneIcon);
+
+        // Title Text
+        this.milestoneTitle = this.add.text(0, 10, 'STAGE 1 CLEARED!', {
+            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#1e293b'
+        }).setOrigin(0.5).setResolution(4);
+        this.milestoneContainer.add(this.milestoneTitle);
+
+        // Subtitle Text (Proud Motivation)
+        this.milestoneSubtitle = this.add.text(0, 26, 'PEMULA HEBAT!', {
+            fontFamily: FONT_PIXEL, fontSize: '7px', color: '#d97706'
+        }).setOrigin(0.5).setResolution(4);
+        this.milestoneContainer.add(this.milestoneSubtitle);
+
+        // Tap to dismiss
+        const hit = this.add.zone(0, 0, 250, 110).setInteractive({ useHandCursor: true });
+        this.milestoneContainer.add(hit);
+        hit.on('pointerdown', () => this._hideMilestoneBanner());
+    }
+
+    _drawPixelVectorIcon(g, type, cx, cy, sz = 2.5) {
+        g.clear();
+        const p = (col, row, color) => {
+            g.fillStyle(color, 1);
+            g.fillRect(cx + (col - 4) * sz, cy + (row - 4) * sz, sz, sz);
+        };
+
+        if (type === 'star') {
+            const Y = 0xfacc15, O = 0xf59e0b, W = 0xfef08a, S = 0xd97706;
+            p(3,0,Y); p(4,0,Y);
+            p(3,1,W); p(4,1,Y);
+            p(0,2,Y); p(1,2,Y); p(2,2,Y); p(3,2,W); p(4,2,Y); p(5,2,Y); p(6,2,Y); p(7,2,Y);
+            p(1,3,Y); p(2,3,W); p(3,3,W); p(4,3,Y); p(5,3,Y); p(6,3,O);
+            p(2,4,Y); p(3,4,Y); p(4,4,Y); p(5,4,O);
+            p(1,5,Y); p(2,5,W); p(3,5,Y); p(4,5,Y); p(5,5,O); p(6,5,S);
+            p(1,6,Y); p(2,6,Y); p(5,6,O); p(6,6,S);
+            p(0,7,Y); p(7,7,S);
+        } else if (type === 'trophy') {
+            const Y = 0xfacc15, W = 0xfffbeb, O = 0xd97706, B = 0x92400e;
+            p(1,0,Y); p(2,0,W); p(3,0,W); p(4,0,Y); p(5,0,Y); p(6,0,O);
+            p(0,1,Y); p(1,1,W); p(2,1,W); p(3,1,Y); p(4,1,Y); p(5,1,O); p(6,1,O); p(7,1,B);
+            p(0,2,Y); p(2,2,W); p(3,2,Y); p(4,2,Y); p(5,2,O); p(7,2,B);
+            p(0,3,Y); p(2,3,W); p(3,3,Y); p(4,3,Y); p(5,3,O); p(7,3,B);
+            p(1,4,Y); p(2,4,Y); p(3,4,Y); p(4,4,Y); p(5,4,O); p(6,4,B);
+            p(3,5,Y); p(4,5,O);
+            p(3,6,Y); p(4,6,O);
+            p(1,7,B); p(2,7,O); p(3,7,Y); p(4,7,Y); p(5,7,O); p(6,7,B);
+        } else if (type === 'rocket') {
+            const R = 0xef4444, W = 0xf8fafc, C = 0x06b6d4, O = 0xf97316, Y = 0xfde047;
+            p(3,0,R); p(4,0,R);
+            p(2,1,R); p(3,1,W); p(4,1,W); p(5,1,R);
+            p(2,2,W); p(3,2,C); p(4,2,C); p(5,2,W);
+            p(2,3,W); p(3,3,C); p(4,3,C); p(5,3,W);
+            p(2,4,W); p(3,4,W); p(4,4,W); p(5,4,W);
+            p(1,5,R); p(2,5,W); p(3,5,W); p(4,5,W); p(5,5,W); p(6,5,R);
+            p(0,6,R); p(1,6,R); p(3,6,O); p(4,6,O); p(6,6,R); p(7,6,R);
+            p(3,7,Y); p(4,7,Y);
+        } else if (type === 'crown') {
+            const Y = 0xfacc15, W = 0xfffbeb, R = 0xef4444, E = 0x10b981, O = 0xb45309;
+            p(0,1,R); p(3,1,E); p(7,1,R);
+            p(0,2,Y); p(3,2,Y); p(4,2,Y); p(7,2,Y);
+            p(0,3,Y); p(1,3,W); p(3,3,W); p(4,3,Y); p(6,3,Y); p(7,3,O);
+            p(0,4,Y); p(1,4,W); p(2,4,Y); p(3,4,Y); p(4,4,Y); p(5,4,Y); p(6,4,O); p(7,4,O);
+            p(1,5,Y); p(2,5,R); p(3,5,Y); p(4,5,E); p(5,5,Y); p(6,5,R);
+            p(1,6,O); p(2,6,Y); p(3,6,Y); p(4,6,Y); p(5,6,Y); p(6,6,O);
+            p(1,7,O); p(2,7,O); p(3,7,O); p(4,7,O); p(5,7,O); p(6,7,O);
+        } else {
+            const C = 0x06b6d4, W = 0xffffff, B = 0x0284c7, D = 0x0369a1;
+            p(2,1,C); p(3,1,W); p(4,1,W); p(5,1,C);
+            p(1,2,C); p(2,2,W); p(3,2,C); p(4,2,B); p(5,2,B); p(6,2,D);
+            p(0,3,C); p(1,3,W); p(2,3,C); p(3,3,C); p(4,3,B); p(5,3,B); p(6,3,D); p(7,3,D);
+            p(1,4,C); p(2,4,C); p(3,4,B); p(4,4,B); p(5,4,D); p(6,4,D);
+            p(2,5,C); p(3,5,B); p(4,5,B); p(5,5,D);
+            p(3,6,B); p(4,6,D);
+            p(3,7,D); p(4,7,D);
+        }
+    }
+
+    _showMilestoneBanner(ms) {
+        this.audio.playMilestone();
+        this._spawnConfetti();
+
+        const cardW = 240, cardH = 96;
+        const cardX = -cardW / 2, cardY = -cardH / 2;
+
+        this.milestoneBg.clear();
+        // Glow/shadow
+        this.milestoneBg.fillStyle(ms.color, 0.25);
+        this.milestoneBg.fillRoundedRect(cardX - 3, cardY - 3, cardW + 6, cardH + 6, 14);
+        // Body
+        this.milestoneBg.fillStyle(0xffffff, 0.98);
+        this.milestoneBg.fillRoundedRect(cardX, cardY, cardW, cardH, 12);
+        // Border
+        this.milestoneBg.lineStyle(2, ms.color, 1);
+        this.milestoneBg.strokeRoundedRect(cardX, cardY, cardW, cardH, 12);
+
+        // Draw pixel vector badge
+        this._drawPixelVectorIcon(this.milestoneIcon, ms.icon, 0, -20, 2.8);
+
+        // Set Texts
+        this.milestoneTitle.setText(ms.title);
+        this.milestoneSubtitle.setText(ms.subtitle).setColor(ms.textColor || '#d97706');
+
+        // Animation
+        this.milestoneContainer.setVisible(true).setAlpha(0).setScale(0.5).setPosition(180, 220);
+        this.tweens.killTweensOf(this.milestoneContainer);
+
+        this.tweens.add({
+            targets: this.milestoneContainer,
+            alpha: 1,
+            scaleX: 1,
+            scaleY: 1,
+            y: 200,
+            duration: 300,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                this.time.delayedCall(2400, () => {
+                    this._hideMilestoneBanner();
+                });
+            }
+        });
+    }
+
+    _hideMilestoneBanner() {
+        if (!this.milestoneContainer || !this.milestoneContainer.visible || this.milestoneContainer.alpha === 0) return;
+        this.tweens.add({
+            targets: this.milestoneContainer,
+            alpha: 0,
+            y: 180,
+            scaleX: 0.9,
+            scaleY: 0.9,
+            duration: 250,
+            ease: 'Cubic.easeIn',
+            onComplete: () => {
+                this.milestoneContainer.setVisible(false);
+            }
         });
     }
 
@@ -1281,6 +1468,10 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.comboStreak = 0;
         this.lastGeneratedShapeKey = null;
         this.shapeFrequency = Object.create(null);
+        this.unlockedMilestones = new Set();
+        if (this.milestoneContainer) {
+            this.milestoneContainer.setVisible(false).setAlpha(0);
+        }
         this.gameOverTimer?.remove(false);
         this.gameOverTimer = null;
         this.gameOverContainer.setVisible(false);
