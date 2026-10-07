@@ -110,7 +110,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const centerY = 66; // Diturunkan memberi headroom atas bersih bagi logo & text BPS
 
         // 1. Tombol Audio (kiri)
-        this.audioBtn = this.add.container(32, centerY).setDepth(25);
+        this.audioBtn = this.add.container(32, centerY + 45).setDepth(25);
         
         const audioBg = this.add.graphics();
         audioBg.fillStyle(0xffffff, 1);
@@ -148,25 +148,25 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const scoreBoxX = 100;
         this.scoreValueText = this.add.text(scoreBoxX, centerY, '0', {
             fontFamily: FONT_PIXEL,
-            fontSize: '20px',
+            fontSize: '18px',
             color: C.SCORE_VAL
-        }).setOrigin(0.5, 0.5).setResolution(4);
+        }).setOrigin(0.5, -0.5).setResolution(4);
 
         // 3. Mahkota / Crown Icon (tengah)
         this.crownIcon = this.add.image(180, centerY, 'mahkota')
-            .setScale(0.07)
-            .setOrigin(0.5, 0.5);
+            .setScale(0.05)
+            .setOrigin(0.5, 0.4);
 
         // 4. Skor Terbaik Value (kanan-tengah) — Teks angka saja, jernih & tajam
         const bestBoxX = 260;
         this.highScoreValueText = this.add.text(bestBoxX, centerY, `${this.highScore}`, {
             fontFamily: FONT_PIXEL,
-            fontSize: '20px',
+            fontSize: '18px',
             color: C.BEST_VAL
-        }).setOrigin(0.5, 0.5).setResolution(4);
+        }).setOrigin(0.5, -0.5).setResolution(4);
 
         // 5. Tombol Pause (kanan)
-        this.pauseBtn = this.add.container(328, centerY).setDepth(25);
+        this.pauseBtn = this.add.container(328, centerY + 45).setDepth(25);
         
         const pauseBg = this.add.graphics();
         pauseBg.fillStyle(0xffffff, 1);
@@ -232,9 +232,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Fever / Hyper Gauge UI ──────────────────────────────
 
     _buildFeverGauge() {
-        this.feverContainer = this.add.container(180, 108).setDepth(20);
+        this.feverContainer = this.add.container(180, 120).setDepth(20);
 
-        const trackW = 250, trackH = 9;
+        const trackW = 180, trackH = 9;
         const trackX = -trackW / 2, trackY = -trackH / 2;
 
         this.feverTrackGraphics = this.add.graphics();
@@ -247,9 +247,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.feverBarGraphics = this.add.graphics();
         this.feverContainer.add(this.feverBarGraphics);
 
-        this.feverLabel = this.add.text(0, -11, 'FEVER GAUGE', {
+        this.feverLabel = this.add.text(0, -15, 'FEVER GAUGE', {
             fontFamily: FONT_PIXEL,
-            fontSize: '7px',
+            fontSize: '8px',
             color: '#94a3b8'
         }).setOrigin(0.5, 0.5).setResolution(4);
         this.feverContainer.add(this.feverLabel);
@@ -262,7 +262,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _drawFeverBar() {
         this.feverBarGraphics.clear();
-        const trackW = 250, trackH = 9;
+        const trackW = 180, trackH = 9;
         const trackX = -trackW / 2, trackY = -trackH / 2;
         const pct = Math.max(0, Math.min(100, this.feverGauge)) / 100;
         const fillW = Math.max(0, (trackW - 2) * pct);
