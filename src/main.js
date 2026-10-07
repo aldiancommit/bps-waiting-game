@@ -53,7 +53,7 @@ if (document.fonts && document.fonts.load) {
             document.fonts.load('500 10px "Inter"'),
             document.fonts.ready
         ]),
-        new Promise(resolve => setTimeout(resolve, 1500))
+        new Promise(resolve => setTimeout(resolve, 400))
     ]).then(startGame).catch(startGame);
 } else {
     window.addEventListener('load', startGame);

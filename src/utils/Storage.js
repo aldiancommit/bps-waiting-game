@@ -5,11 +5,28 @@
 import { STORAGE_KEYS } from './Constants.js';
 
 export function getHighScore() {
-    return parseInt(localStorage.getItem(STORAGE_KEYS.HIGH_SCORE)) || 0;
+    if (typeof window === 'undefined') return 0;
+    try {
+        const current = localStorage.getItem(STORAGE_KEYS.HIGH_SCORE);
+        if (current !== null) {
+            return parseInt(current, 10) || 0;
+        }
+        // Legacy fallback
+        const legacy = localStorage.getItem('bps_1010_highscore');
+        if (legacy !== null) {
+            const val = parseInt(legacy, 10) || 0;
+            localStorage.setItem(STORAGE_KEYS.HIGH_SCORE, val.toString());
+            return val;
+        }
+    } catch (e) { }
+    return 0;
 }
 
 export function saveHighScore(score) {
-    localStorage.setItem(STORAGE_KEYS.HIGH_SCORE, score.toString());
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(STORAGE_KEYS.HIGH_SCORE, score.toString());
+    } catch (e) { }
 }
 
 export function saveGameState(state) {

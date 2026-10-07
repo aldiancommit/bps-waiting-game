@@ -33,9 +33,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('logo-bps', '/assets/logo-bps-clean.png');
-        this.load.image('mahkota', '/assets/mahkota-icon.png');
-        this.load.image('pause', '/assets/pause.png');
+        this.load.image('logo-bps', '/assets/logo-bps.webp');
+        this.load.image('mahkota', '/assets/mahkota-icon.webp');
         
         const kitPath = '/assets/block-puzzle-kit/addons/block_puzzle_kit/art/glossy/hd';
         this.load.image('kit-red', `${kitPath}/red.webp`);
@@ -79,7 +78,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.activeDragPiece = null;
         this.activeDragSlot = null;
         this.activePointerId = null;
-        this.lastGhostKey = null;
+        this.lastGhostCol = -999;
+        this.lastGhostRow = -999;
+        this.lastGhostPiece = null;
 
         this.board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
         // Parallel board tracking which cells use sprite rendering
@@ -91,6 +92,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.slotContainers = [null, null, null];
         this.unlockedMilestones = new Set();
 
+        this._initObjectPools();
         this._buildBackground();
         this._buildHeader();
         this._buildFeverGauge();
@@ -644,14 +646,10 @@ export class BlockPuzzleScene extends Phaser.Scene {
         container.pieceHeight = pieceH;
 
         const g = this.add.graphics();
-        const maskG = this.make.graphics();
-        maskG.fillStyle(0xffffff, 1);
 
         shapeData.cells.forEach(([c, r, colorObj]) => {
             const bx = container.pieceOffsetX + c * GRID_STEP;
             const by = container.pieceOffsetY + r * GRID_STEP;
-            
-            maskG.fillRoundedRect(bx, by, CELL_SIZE, CELL_SIZE, 5);
 
             if (colorObj && colorObj.isSpecial === 'rainbow') {
                 this._drawPixelCell(g, bx, by, colorObj.color, 1, 'rainbow');
@@ -669,10 +667,6 @@ export class BlockPuzzleScene extends Phaser.Scene {
             }
         });
         container.add(g);
-        
-        container.add(maskG);
-        maskG.setAlpha(0);
-        container.setMask(maskG.createGeometryMask());
 
         container.setScale(scale).setDepth(20);
         return container;
@@ -754,7 +748,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.activeDragPiece = container;
         this.activeDragSlot = slotIndex;
         this.activePointerId = pointer.id;
-        this.lastGhostKey = null;
+        this.lastGhostCol = -999;
+        this.lastGhostRow = -999;
+        this.lastGhostPiece = null;
 
         this.audio.playPickup();
         triggerHaptic(14);
@@ -783,7 +779,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.activeDragPiece = null;
         this.activeDragSlot = null;
         this.activePointerId = null;
-        this.lastGhostKey = null;
+        this.lastGhostCol = -999;
+        this.lastGhostRow = -999;
+        this.lastGhostPiece = null;
         this.ghostGraphics.setVisible(false);
 
         const shapeData = this._normalizeShape(piece?.shapeData);
@@ -803,7 +801,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.activeDragPiece = null;
         this.activeDragSlot = null;
         this.activePointerId = null;
-        this.lastGhostKey = null;
+        this.lastGhostCol = -999;
+        this.lastGhostRow = -999;
+        this.lastGhostPiece = null;
         this.ghostGraphics.setVisible(false);
         this._returnToSlot(piece, slotIdx);
     }
@@ -840,23 +840,29 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     _updateGhost(container) {
-        if (!Array.isArray(container?.shapeData?.cells)) {
-            this.lastGhostKey = null;
-            this.ghostGraphics.setVisible(false);
+        if (!container?.shapeData?.cells) {
+            if (this.lastGhostCol !== -999) {
+                this.lastGhostCol = -999;
+                this.lastGhostRow = -999;
+                this.lastGhostPiece = null;
+                this.ghostGraphics.setVisible(false);
+            }
             return;
         }
 
         const coord = this._gridCoordOf(container);
         if (coord && this._canPlace(container.shapeData.cells, coord.col, coord.row)) {
-            const colorsKey = container.shapeData.cells.map(cell => cell[2]?.id || cell[2]?.color || '').join('|');
-            const key = `${coord.col},${coord.row},${colorsKey}`;
-            if (this.lastGhostKey !== key) {
-                this.lastGhostKey = key;
+            if (this.lastGhostCol !== coord.col || this.lastGhostRow !== coord.row || this.lastGhostPiece !== container) {
+                this.lastGhostCol = coord.col;
+                this.lastGhostRow = coord.row;
+                this.lastGhostPiece = container;
                 this._drawGhost(container.shapeData, coord.col, coord.row);
                 this.ghostGraphics.setVisible(true);
             }
-        } else if (this.lastGhostKey !== null) {
-            this.lastGhostKey = null;
+        } else if (this.lastGhostCol !== -999) {
+            this.lastGhostCol = -999;
+            this.lastGhostRow = -999;
+            this.lastGhostPiece = null;
             this.ghostGraphics.setVisible(false);
         }
     }
@@ -1094,18 +1100,74 @@ export class BlockPuzzleScene extends Phaser.Scene {
         return true;
     }
 
+    _initObjectPools() {
+        this.floatTextPool = [];
+        for (let i = 0; i < 15; i++) {
+            const txt = this.add.text(0, 0, '', {
+                fontFamily: FONT_PIXEL,
+                fontSize: '8px',
+                color: '#f59e0b',
+                stroke: '#000000',
+                strokeThickness: 3
+            }).setOrigin(0.5).setDepth(70).setResolution(3).setVisible(false).setActive(false);
+            this.floatTextPool.push(txt);
+        }
+
+        this.glowPool = [];
+        for (let i = 0; i < 15; i++) {
+            const glow = this.add.image(0, 0, 'pt-glow')
+                .setDepth(49)
+                .setVisible(false)
+                .setActive(false);
+            this.glowPool.push(glow);
+        }
+
+        this.sparklePool = [];
+        for (let i = 0; i < 30; i++) {
+            const sparkle = this.add.image(0, 0, 'pt-sparkle')
+                .setDepth(50)
+                .setVisible(false)
+                .setActive(false);
+            this.sparklePool.push(sparkle);
+        }
+
+        this.particlePool = [];
+        for (let i = 0; i < 60; i++) {
+            const p = this.add.graphics()
+                .setDepth(55)
+                .setVisible(false)
+                .setActive(false);
+            this.particlePool.push(p);
+        }
+
+        this.confettiPool = [];
+        for (let i = 0; i < 40; i++) {
+            const c = this.add.graphics()
+                .setDepth(110)
+                .setVisible(false)
+                .setActive(false);
+            this.confettiPool.push(c);
+        }
+    }
+
     _spawnBombBlastParticle(x, y, color) {
         const blastColors = [0xef4444, 0xf97316, 0xfacc15, 0x1e293b];
         for (let i = 0; i < 5; i++) {
-            const p = this.add.graphics().setDepth(55);
+            let p = this.particlePool.find(item => !item.active);
+            if (!p) {
+                p = this.add.graphics().setDepth(55);
+                this.particlePool.push(p);
+            }
             const sz = Phaser.Math.Between(3, 7);
+            p.clear();
             p.fillStyle(Phaser.Utils.Array.GetRandom(blastColors), 1);
             p.fillRect(-sz / 2, -sz / 2, sz, sz);
-            p.setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+            p.setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2).setAlpha(1).setScale(1).setVisible(true).setActive(true);
 
             const angle = Math.random() * Math.PI * 2;
             const dist = Phaser.Math.Between(20, 50);
 
+            this.tweens.killTweensOf(p);
             this.tweens.add({
                 targets: p,
                 x: p.x + Math.cos(angle) * dist,
@@ -1115,7 +1177,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 scaleY: 0.2,
                 duration: Phaser.Math.Between(300, 550),
                 ease: 'Cubic.easeOut',
-                onComplete: () => p.destroy()
+                onComplete: () => p.setActive(false).setVisible(false)
             });
         }
     }
@@ -1123,7 +1185,6 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Efek partikel saat menaruh balok ─────────────────────
 
     _spawnPlaceParticles(col, row, shapeData) {
-        // [FIX] Calculate true center of all cells, not just the origin cell
         let sumX = 0, sumY = 0;
         shapeData.cells.forEach(([c, r]) => {
             sumX += GRID_START_X + (col + c) * GRID_STEP + CELL_SIZE / 2;
@@ -1139,15 +1200,21 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
 
         for (let i = 0; i < count; i++) {
-            const particle = this.add.graphics().setDepth(50);
+            let particle = this.particlePool.find(p => !p.active);
+            if (!particle) {
+                particle = this.add.graphics().setDepth(50);
+                this.particlePool.push(particle);
+            }
             const size = Phaser.Math.Between(2, 5);
+            particle.clear();
             particle.fillStyle(pColor, 1);
             particle.fillRect(-size / 2, -size / 2, size, size);
-            particle.setPosition(centerX, centerY);
+            particle.setPosition(centerX, centerY).setAlpha(1).setScale(1).setVisible(true).setActive(true);
 
             const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
             const dist = Phaser.Math.Between(15, 35);
 
+            this.tweens.killTweensOf(particle);
             this.tweens.add({
                 targets: particle,
                 x: centerX + Math.cos(angle) * dist,
@@ -1157,7 +1224,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 scaleY: 0.3,
                 duration: 300,
                 ease: 'Cubic.easeOut',
-                onComplete: () => particle.destroy()
+                onComplete: () => particle.setActive(false).setVisible(false)
             });
         }
     }
@@ -1335,13 +1402,16 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         // Jika ada balok bom yang ikut terhapus atau tersenggol oleh match ini, ledakkan 3x3 berantai
         if (bombsTriggered.length > 0) {
-            this.time.delayedCall(140, () => {
+            this.time.delayedCall(200, () => {
                 this._detonateBombs(bombsTriggered);
             });
         }
 
         this.tweens.add({
-            targets: flash, alpha: 0, duration: 150, ease: 'Linear',
+            targets: flash,
+            alpha: 0,
+            duration: 250,
+            ease: 'Quad.easeOut',
             onComplete: () => { flash.destroy(); }
         });
 
@@ -1351,43 +1421,79 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Partikel pixel saat baris/kolom bersih ───────────────
 
     _spawnClearParticle(x, y, color) {
-        // Spawn glow
-        const glow = this.add.image(x + CELL_SIZE/2, y + CELL_SIZE/2, 'pt-glow').setDepth(49).setTint(color).setAlpha(0.6).setScale(0.5);
-        this.tweens.add({
-            targets: glow, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: 400, ease: 'Sine.easeOut',
-            onComplete: () => glow.destroy()
-        });
+        // Spawn glow from pool
+        let glow = this.glowPool.find(g => !g.active);
+        if (glow) {
+            glow.setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2)
+                .setTint(color)
+                .setAlpha(0.65)
+                .setScale(0.5)
+                .setVisible(true)
+                .setActive(true);
+            this.tweens.killTweensOf(glow);
+            this.tweens.add({
+                targets: glow,
+                scaleX: 1.6,
+                scaleY: 1.6,
+                alpha: 0,
+                duration: 520,
+                ease: 'Sine.easeOut',
+                onComplete: () => glow.setActive(false).setVisible(false)
+            });
+        }
 
-        // Spawn sparkles
+        // Spawn sparkles from pool
         const count = 3;
         for (let i = 0; i < count; i++) {
-            const p = this.add.image(x + CELL_SIZE/2, y + CELL_SIZE/2, 'pt-sparkle').setDepth(50).setTint(color).setScale(Phaser.Math.FloatBetween(0.2, 0.5));
-            
-            this.tweens.add({
-                targets: p,
-                x: p.x + Phaser.Math.Between(-30, 30),
-                y: p.y + Phaser.Math.Between(-30, 30),
-                alpha: 0,
-                angle: Phaser.Math.Between(-180, 180),
-                duration: Phaser.Math.Between(300, 500),
-                ease: 'Quad.easeOut',
-                onComplete: () => p.destroy()
-            });
+            let p = this.sparklePool.find(s => !s.active);
+            if (p) {
+                p.setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2)
+                    .setTint(color)
+                    .setScale(Phaser.Math.FloatBetween(0.25, 0.45))
+                    .setAlpha(1)
+                    .setAngle(0)
+                    .setVisible(true)
+                    .setActive(true);
+                this.tweens.killTweensOf(p);
+                this.tweens.add({
+                    targets: p,
+                    x: p.x + Phaser.Math.Between(-32, 32),
+                    y: p.y + Phaser.Math.Between(-32, 32),
+                    alpha: 0,
+                    angle: Phaser.Math.Between(-180, 180),
+                    duration: Phaser.Math.Between(450, 650),
+                    ease: 'Quad.easeOut',
+                    onComplete: () => p.setActive(false).setVisible(false)
+                });
+            }
         }
     }
 
     // ── Floating Score Text ─────────────────────────────────
 
     _floatText(text, x, y) {
-        const label = this.add.text(x, y, text, {
-            fontFamily: FONT_PIXEL, fontSize: '8px',
-            color: '#f59e0b', stroke: '#000000', strokeThickness: 3
-        }).setOrigin(0.5).setDepth(70).setResolution(4);
+        let label = this.floatTextPool.find(t => !t.active);
+        if (!label) {
+            label = this.add.text(x, y, text, {
+                fontFamily: FONT_PIXEL, fontSize: '8px',
+                color: '#f59e0b', stroke: '#000000', strokeThickness: 3
+            }).setOrigin(0.5).setDepth(70).setResolution(3);
+            this.floatTextPool.push(label);
+        }
+        this.tweens.killTweensOf(label);
+        label.setText(text).setPosition(x, y).setAlpha(1).setScale(1).setVisible(true).setActive(true);
 
         this.tweens.add({
-            targets: label, y: y - 40, alpha: 0, scaleX: 1.15, scaleY: 1.15,
-            duration: 700, ease: 'Back.easeOut',
-            onComplete: () => label.destroy()
+            targets: label,
+            y: y - 42,
+            alpha: 0,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 850,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                label.setActive(false).setVisible(false);
+            }
         });
     }
 
@@ -1600,7 +1706,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
 
         // Special Block Roll (Rainbow Wildcard / Bomb)
-        const specialSpawnChance = this.isFeverActive ? 0.32 : 0.12;
+        const specialSpawnChance = this.isFeverActive ? 0.15 : 0.05;
         if (Math.random() < specialSpawnChance) {
             const specialIndex = Phaser.Math.Between(0, assignedColors.length - 1);
             if (Math.random() < 0.55) {
@@ -1713,8 +1819,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.gameOverTimer = this.time.delayedCall(400, () => {
             if (!this.isGameOver) return;
             this.finalScoreText.setText(`${this.score}`);
+            if (this.gameOverHighScoreText) {
+                this.gameOverHighScoreText.setText(`REKOR TERBAIK: ${this.highScore}`);
+            }
             const isRecord = this.score >= this.highScore && this.score > 0;
-            this.newRecordBadge.setVisible(isRecord);
+            if (this.newRecordContainer) {
+                this.newRecordContainer.setVisible(isRecord);
+            }
 
             if (isRecord) this._spawnConfetti();
 
@@ -1723,17 +1834,24 @@ export class BlockPuzzleScene extends Phaser.Scene {
         });
     }
 
-    // ── Efek Konfeti Pixel (Rekor Baru) ─────────────────────
+    // ── Efek Konfeti Pixel (Rekor Baru — Zero GC Pool) ───────
 
     _spawnConfetti() {
         const colors = [0xf43f5e, 0xfacc15, 0x06b6d4, 0x84cc16, 0xa855f7, 0xfb923c];
         for (let i = 0; i < 40; i++) {
-            const p = this.add.graphics().setDepth(110);
+            let p = this.confettiPool.find(item => !item.active);
+            if (!p) {
+                p = this.add.graphics().setDepth(110);
+                this.confettiPool.push(p);
+            }
             const sz = Phaser.Math.Between(3, 6);
+            p.clear();
             p.fillStyle(Phaser.Utils.Array.GetRandom(colors), 1);
             p.fillRect(0, 0, sz, sz);
-            p.setPosition(Phaser.Math.Between(30, 330), Phaser.Math.Between(-20, -60));
+            p.setPosition(Phaser.Math.Between(30, 330), Phaser.Math.Between(-20, -60))
+                .setAlpha(1).setScale(1).setVisible(true).setActive(true);
 
+            this.tweens.killTweensOf(p);
             this.tweens.add({
                 targets: p,
                 y: Phaser.Math.Between(200, 620),
@@ -1743,136 +1861,243 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 duration: Phaser.Math.Between(800, 1600),
                 delay: Phaser.Math.Between(0, 400),
                 ease: 'Cubic.easeIn',
-                onComplete: () => p.destroy()
+                onComplete: () => p.setActive(false).setVisible(false)
             });
         }
     }
 
-    // ── Game Over Overlay ───────────────────────────────────
+    // ── Simple & Clean Pixel Game Over Modal ─────────────────
 
     _buildGameOverOverlay() {
         this.gameOverContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
 
-        // Dim
+        // Modern Semi-transparent Backdrop
         const dim = this.add.graphics();
-        dim.fillStyle(0x000000, 0.45);
+        dim.fillStyle(0x0f172a, 0.65);
         dim.fillRect(0, 0, 360, 640);
         this.gameOverContainer.add(dim);
 
-        // Card
-        const cardX = 40, cardY = 160, cardW = 280, cardH = 300;
+        // Clean Pixel-Style Card Container
+        const cardW = 270, cardH = 264;
+        const cardX = 180 - cardW / 2, cardY = 175;
         const card = this.add.graphics();
         this._drawCard(card, cardX, cardY, cardW, cardH);
         this.gameOverContainer.add(card);
 
-        // Title
-        const title = this.add.text(180, 195, 'GAME OVER', {
-            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#f43f5e'
+        // Title: GAME OVER (Pixel Font)
+        const title = this.add.text(180, cardY + 28, 'GAME OVER', {
+            fontFamily: FONT_PIXEL, fontSize: '13px', color: '#ef4444'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(title);
 
-        // Mahkota icon
-        const goCrown = this.add.image(180, 245, 'mahkota').setScale(0.09);
-        this.gameOverContainer.add(goCrown);
+        // Score Label (Pixel Font)
+        const scoreLabel = this.add.text(180, cardY + 64, 'SKOR AKHIR', {
+            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#64748b'
+        }).setOrigin(0.5).setResolution(4);
+        this.gameOverContainer.add(scoreLabel);
 
-        // Skor akhir
-        this.finalScoreText = this.add.text(180, 300, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '18px', color: '#1e293b'
+        // Final Score Value (Pixel Font matching in-game score typography)
+        this.finalScoreText = this.add.text(180, cardY + 98, '0', {
+            fontFamily: FONT_PIXEL, fontSize: '22px', color: '#1e293b'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(this.finalScoreText);
 
-        // Rekor baru badge
-        this.newRecordBadge = this.add.text(180, 332, 'REKOR BARU!', {
-            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#f59e0b'
-        }).setOrigin(0.5).setVisible(false).setResolution(4);
-        this.gameOverContainer.add(this.newRecordBadge);
+        // Best Score Subtext (Pixel Font)
+        this.gameOverHighScoreText = this.add.text(180, cardY + 134, 'REKOR: 0', {
+            fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#b45309'
+        }).setOrigin(0.5).setResolution(4);
+        this.gameOverContainer.add(this.gameOverHighScoreText);
+
+        // New Record Badge Pill
+        this.newRecordContainer = this.add.container(180, cardY + 162).setVisible(false);
+        const badgeBg = this.add.graphics();
+        badgeBg.fillStyle(0xfef3c7, 1);
+        badgeBg.fillRoundedRect(-60, -10, 120, 20, 8);
+        badgeBg.lineStyle(1, 0xf59e0b, 1);
+        badgeBg.strokeRoundedRect(-60, -10, 120, 20, 8);
+        this.newRecordContainer.add(badgeBg);
+
+        this.newRecordBadge = this.add.text(0, 0, '✨ REKOR BARU! 🎉', {
+            fontFamily: FONT_PIXEL, fontSize: '7px', color: '#b45309'
+        }).setOrigin(0.5).setResolution(4);
+        this.newRecordContainer.add(this.newRecordBadge);
+        this.gameOverContainer.add(this.newRecordContainer);
 
         // Tombol Main Lagi
-        const btnW = 200, btnH = 40;
-        const btnX = 180 - btnW / 2, btnY = 395;
+        const btnW = 200, btnH = 42;
+        const btnX = 180 - btnW / 2, btnY = cardY + 204;
         const btn = this.add.graphics();
         this._drawButton(btn, btnX, btnY, btnW, btnH, C.BTN_BG);
         this.gameOverContainer.add(btn);
 
-        const btnTxt = this.add.text(180, btnY + btnH / 2, 'MAIN LAGI', {
-            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#ffffff'
+        const btnTxt = this.add.text(180, btnY + btnH / 2, '> MAIN LAGI <', {
+            fontFamily: FONT_PIXEL, fontSize: '9px', color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(btnTxt);
 
         const hitZone = this.add.zone(180, btnY + btnH / 2, btnW, btnH)
             .setInteractive({ useHandCursor: true });
         this.gameOverContainer.add(hitZone);
-        hitZone.on('pointerdown', () => this._resetGame());
+        hitZone.on('pointerdown', () => {
+            triggerHaptic(20);
+            this._resetGame();
+        });
     }
 
-    // ── Pause Overlay ───────────────────────────────────────
+    // ── Minimalist 3-Card Pause Menu (NATURAL & CLEAN UI) ─────
 
     _buildPauseOverlay() {
         this.pauseContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
 
-        // Dim
+        // Modern Dim Backdrop
         const dim = this.add.graphics();
-        dim.fillStyle(0x000000, 0.45);
+        dim.fillStyle(0x0f172a, 0.65);
         dim.fillRect(0, 0, 360, 640);
         this.pauseContainer.add(dim);
 
-        // Card
-        const cardX = 55, cardY = 200, cardW = 250, cardH = 220;
-        const card = this.add.graphics();
-        this._drawCard(card, cardX, cardY, cardW, cardH);
-        this.pauseContainer.add(card);
+        // Modal Card Container
+        const modalW = 284, modalH = 176;
+        const modalX = 180 - modalW / 2, modalY = 222;
+        const modalBg = this.add.graphics();
+        this._drawCard(modalBg, modalX, modalY, modalW, modalH);
+        this.pauseContainer.add(modalBg);
 
-        // Pause title
-        const pauseTitle = this.add.text(180, 230, 'PAUSED', {
-            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#1e293b'
+        // Header Title & Subtitle (Pixel Font)
+        const pauseTitle = this.add.text(180, modalY + 24, 'JEDA', {
+            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#0f172a'
         }).setOrigin(0.5).setResolution(4);
         this.pauseContainer.add(pauseTitle);
 
-        // Tombol Lanjut
-        const btn1W = 180, btn1H = 36;
-        const btn1X = 180 - btn1W / 2, btn1Y = 270;
-        const btn1 = this.add.graphics();
-        this._drawButton(btn1, btn1X, btn1Y, btn1W, btn1H, C.BTN_GREEN);
-        this.pauseContainer.add(btn1);
-
-        const btn1Txt = this.add.text(180, btn1Y + btn1H / 2, 'LANJUT', {
-            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#ffffff'
+        const pauseSub = this.add.text(180, modalY + 42, 'SENTUH UNTUK LANJUT', {
+            fontFamily: FONT_PIXEL, fontSize: '6.5px', color: '#64748b'
         }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(btn1Txt);
+        this.pauseContainer.add(pauseSub);
 
-        const hit1 = this.add.zone(180, btn1Y + btn1H / 2, btn1W, btn1H)
-            .setInteractive({ useHandCursor: true });
-        this.pauseContainer.add(hit1);
-        hit1.on('pointerdown', () => this._togglePause(false));
+        // 3 Horizontal Cards (Resume, Restart, Sound Toggle)
+        // Clean white card background, rounded corners, solid dark slate geometric vector icons, NO text
+        const cardSize = 68;
+        const cardSpacing = 14;
+        const cardY = modalY + 110;
 
-        // Tombol Mulai Ulang
-        const btn2Y = btn1Y + btn1H + 16;
-        const btn2 = this.add.graphics();
-        this._drawButton(btn2, btn1X, btn2Y, btn1W, btn1H, C.BTN_RED);
-        this.pauseContainer.add(btn2);
+        // Card 1: Resume (▶)
+        const c1X = 180 - cardSize - cardSpacing;
+        this.resumeCard = this._buildActionCard(c1X, cardY, cardSize, 'resume', () => {
+            triggerHaptic(15);
+            this._togglePause(false);
+        });
+        this.pauseContainer.add(this.resumeCard);
 
-        const btn2Txt = this.add.text(180, btn2Y + btn1H / 2, 'MULAI ULANG', {
-            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(btn2Txt);
-
-        const hit2 = this.add.zone(180, btn2Y + btn1H / 2, btn1W, btn1H)
-            .setInteractive({ useHandCursor: true });
-        this.pauseContainer.add(hit2);
-        hit2.on('pointerdown', () => {
+        // Card 2: Restart (↺)
+        const c2X = 180;
+        this.restartCard = this._buildActionCard(c2X, cardY, cardSize, 'restart', () => {
+            triggerHaptic(20);
             this._togglePause(false);
             this._resetGame();
         });
+        this.pauseContainer.add(this.restartCard);
+
+        // Card 3: Audio Toggle (🔊 / 🔇)
+        const c3X = 180 + cardSize + cardSpacing;
+        this.soundCard = this._buildActionCard(c3X, cardY, cardSize, 'audio', () => {
+            this.audio.toggleMute();
+            this._drawAudioIcon();
+            this._drawCardAudioIcon();
+            triggerHaptic(15);
+        });
+        this.pauseContainer.add(this.soundCard);
+    }
+
+    _buildActionCard(x, y, size, type, onAction) {
+        const container = this.add.container(x, y);
+
+        // Card Background: Clean white, subtle border, rounded corner
+        const bg = this.add.graphics();
+        bg.fillStyle(0xffffff, 1);
+        bg.fillRoundedRect(-size / 2, -size / 2, size, size, 12);
+        bg.lineStyle(1.5, 0xe2e8f0, 1);
+        bg.strokeRoundedRect(-size / 2, -size / 2, size, size, 12);
+        container.add(bg);
+
+        const iconG = this.add.graphics();
+        container.add(iconG);
+
+        if (type === 'resume') {
+            // Pure geometric Play Triangle
+            iconG.fillStyle(0x1e293b, 1);
+            iconG.fillTriangle(-5, -10, -5, 10, 8, 0);
+        } else if (type === 'restart') {
+            // Pure geometric Circular Reload Arrow pointing clockwise forward
+            iconG.lineStyle(2.8, 0x1e293b, 1);
+            iconG.beginPath();
+            iconG.arc(0, 0, 10.5, -Math.PI * 0.45, Math.PI * 1.1, false);
+            iconG.strokePath();
+            // Arrow head pointing forward clockwise
+            iconG.fillStyle(0x1e293b, 1);
+            iconG.fillTriangle(6, -10.5, 0, -15, 0, -6);
+        } else if (type === 'audio') {
+            this.pauseAudioIconGraphics = iconG;
+            this._drawCardAudioIcon();
+        }
+
+        // Thumb-friendly wide touch zone
+        const zone = this.add.zone(0, 0, size, size).setInteractive({ useHandCursor: true });
+        container.add(zone);
+
+        zone.on('pointerdown', () => {
+            this.tweens.killTweensOf(container);
+            container.setScale(0.88);
+            this.tweens.add({
+                targets: container,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 160,
+                ease: 'Back.easeOut',
+                onComplete: onAction
+            });
+        });
+
+        return container;
+    }
+
+    _drawCardAudioIcon() {
+        if (!this.pauseAudioIconGraphics) return;
+        this.pauseAudioIconGraphics.clear();
+        const isMuted = this.audio.getIsMuted();
+
+        const color = isMuted ? 0x94a3b8 : 0x1e293b;
+        this.pauseAudioIconGraphics.fillStyle(color, 1);
+
+        // Speaker Cone Body
+        this.pauseAudioIconGraphics.fillRect(-10, -4, 4, 8);
+        this.pauseAudioIconGraphics.fillTriangle(-6, -4, -6, 4, 1, 9);
+        this.pauseAudioIconGraphics.fillTriangle(-6, -4, 1, 9, 1, -9);
+
+        if (isMuted) {
+            // Mute Cross / Slash in bright red
+            this.pauseAudioIconGraphics.lineStyle(2.5, 0xef4444, 1);
+            this.pauseAudioIconGraphics.lineBetween(-12, 10, 12, -10);
+        } else {
+            // Sound Waves (arcs)
+            this.pauseAudioIconGraphics.lineStyle(2, 0x1e293b, 1);
+            this.pauseAudioIconGraphics.beginPath();
+            this.pauseAudioIconGraphics.arc(0, 0, 7, -Math.PI / 3, Math.PI / 3, false);
+            this.pauseAudioIconGraphics.strokePath();
+
+            this.pauseAudioIconGraphics.beginPath();
+            this.pauseAudioIconGraphics.arc(0, 0, 12, -Math.PI / 3, Math.PI / 3, false);
+            this.pauseAudioIconGraphics.strokePath();
+        }
     }
 
     _togglePause(paused) {
         this.isPaused = paused;
         this.pauseContainer.setVisible(paused);
         if (paused) {
-            // [FIX] Cancel any active drag when pausing
+            // Cancel any active drag when pausing
             if (this.activeDragPiece) {
                 this._cancelDrop();
             }
+            this._drawCardAudioIcon();
             this.pauseContainer.setAlpha(0);
             this.tweens.add({ targets: this.pauseContainer, alpha: 1, duration: 150 });
         }

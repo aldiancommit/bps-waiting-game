@@ -3,13 +3,15 @@
  * Native WebAudio API Implementation (100% Offline, Zero External Audio Assets)
  */
 
+import { STORAGE_KEYS } from './Constants.js';
+
 export class RetroAudio {
     constructor() {
         this.ctx = null;
         this.masterGain = null;
         this.noiseBuffer = null;
         this.isMuted = typeof window !== 'undefined'
-            ? localStorage.getItem('bps_1010_muted') === 'true'
+            ? (localStorage.getItem(STORAGE_KEYS.MUTED) === 'true' || localStorage.getItem('bps_1010_muted') === 'true')
             : false;
         this.lastClearTime = 0;
 
@@ -31,7 +33,7 @@ export class RetroAudio {
         this.isMuted = !!muted;
         if (typeof window !== 'undefined') {
             try {
-                localStorage.setItem('bps_1010_muted', this.isMuted ? 'true' : 'false');
+                localStorage.setItem(STORAGE_KEYS.MUTED, this.isMuted ? 'true' : 'false');
             } catch (e) { }
         }
     }
@@ -104,7 +106,7 @@ export class RetroAudio {
     }
 
     /**
-     * Tactile, punchy block drop sound with mechanical thud.
+     * Soft, tactile, satisfying gentle pop block drop sound.
      */
     playPlace() {
         if (this.isMuted) return;
@@ -115,17 +117,18 @@ export class RetroAudio {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(280, now);
-            osc.frequency.exponentialRampToValueAtTime(65, now + 0.085);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(130, now + 0.065);
 
-            gain.gain.setValueAtTime(0.26, now);
-            gain.gain.linearRampToValueAtTime(0.0001, now + 0.085);
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.exponentialRampToValueAtTime(0.18, now + 0.006);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.070);
 
             osc.connect(gain);
             gain.connect(this._getOut());
             osc.start(now);
-            osc.stop(now + 0.085);
+            osc.stop(now + 0.070);
         } catch (e) { }
     }
 

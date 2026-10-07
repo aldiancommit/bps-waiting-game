@@ -40,8 +40,9 @@ export const SLOT_CONFIG = [
 export const SLOT_SCALE = 0.52;
 
 export const STORAGE_KEYS = {
-    HIGH_SCORE: 'bps_1010_highscore',
-    SAVE_STATE: 'bps_1010_savestate'
+    HIGH_SCORE: 'bps_game_tenten_highscore',
+    SAVE_STATE: 'bps_game_tenten_savestate',
+    MUTED: 'bps_game_tenten_muted'
 };
 
 // [TAG: FONT]
