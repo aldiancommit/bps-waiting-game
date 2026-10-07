@@ -46,6 +46,7 @@ export const STORAGE_KEYS = {
 
 // [TAG: FONT]
 export const FONT_PIXEL = "'Public Pixel', sans-serif";
+export const FONT_UI = "'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 // [TAG: PENGATURAN TEMA WARNA UTAMA]
 export const C = {

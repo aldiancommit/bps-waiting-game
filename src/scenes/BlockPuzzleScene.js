@@ -17,7 +17,7 @@ import {
     BOARD_X, BOARD_Y, BOARD_W, BOARD_H,
     FINGER_OFFSET_Y,
     SLOT_CONFIG, SLOT_SCALE,
-    FONT_PIXEL,
+    FONT_PIXEL, FONT_UI,
     C
 } from '../utils/Constants.js';
 import { RetroAudio, triggerHaptic } from '../utils/Audio.js';
@@ -33,6 +33,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.image('logo-bps', '/assets/logo-bps.png');
         this.load.image('mahkota', '/assets/mahkota-icon.png');
         this.load.image('pause', '/assets/pause.png');
         
@@ -104,26 +105,48 @@ export class BlockPuzzleScene extends Phaser.Scene {
         g.fillRect(0, 0, 360, 640);
     }
 
-    // ── Header: Audio Toggle — Score Value — Crown — Best Score Value — Pause ────────────────
+    // ── Header: Logo BPS + Teks — Kontrol — Skor — Mahkota — Rekor ────────────────
 
     _buildHeader() {
-        const centerY = 66; // Diturunkan memberi headroom atas bersih bagi logo & text BPS
+        const topY = 28;    // Baris atas: Logo BPS, Teks Instansi, dan Tombol Kontrol
+        const scoreY = 66;  // Baris tengah: Skor, Mahkota, dan Rekor
 
-        // 1. Tombol Audio (kiri)
-        this.audioBtn = this.add.container(32, centerY + 45).setDepth(25);
+        // 1. Logo BPS (kiri atas)
+        this.bpsLogo = this.add.image(24, topY, 'logo-bps')
+            .setScale(0.048)
+            .setOrigin(0.5, 0.5)
+            .setDepth(25);
+
+        // 2. Teks "BPS" & "Badan Pusat Statistik" (di samping logo BPS, warna sama dengan teks skor)
+        this.bpsTitle = this.add.text(42, topY - 7, 'BPS', {
+            fontFamily: FONT_UI,
+            fontSize: '13px',
+            fontWeight: '800',
+            color: C.SCORE_VAL
+        }).setOrigin(0, 0.5).setResolution(4).setDepth(25);
+
+        this.bpsSubtitle = this.add.text(42, topY + 7, 'Badan Pusat Statistik', {
+            fontFamily: FONT_UI,
+            fontSize: '7.5px',
+            fontWeight: '600',
+            color: C.SCORE_VAL
+        }).setOrigin(0, 0.5).setResolution(4).setDepth(25);
+
+        // 3. Tombol Audio (kanan atas, sejajar dengan logo BPS)
+        this.audioBtn = this.add.container(292, topY).setDepth(25);
         
         const audioBg = this.add.graphics();
         audioBg.fillStyle(0xffffff, 1);
-        audioBg.fillRoundedRect(-15, -15, 30, 30, 8);
+        audioBg.fillRoundedRect(-14, -14, 28, 28, 7);
         audioBg.lineStyle(1, C.CELL_BORDER, 0.8);
-        audioBg.strokeRoundedRect(-15, -15, 30, 30, 8);
+        audioBg.strokeRoundedRect(-14, -14, 28, 28, 7);
         this.audioBtn.add(audioBg);
 
         this.audioIconGraphics = this.add.graphics();
         this.audioBtn.add(this.audioIconGraphics);
         this._drawAudioIcon();
 
-        const audioZone = this.add.zone(0, 0, 34, 34)
+        const audioZone = this.add.zone(0, 0, 32, 32)
             .setInteractive({ useHandCursor: true });
         this.audioBtn.add(audioZone);
 
@@ -141,47 +164,26 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 duration: 150, ease: 'Back.easeOut'
             });
 
-            this._floatText(isMuted ? 'SUARA: MATI' : 'SUARA: AKTIF', 40, 75);
+            this._floatText(isMuted ? 'SUARA: MATI' : 'SUARA: AKTIF', 292, 52);
         });
 
-        // 2. Score Value (kiri-tengah) — Teks angka saja, jernih & tajam tanpa label blur
-        const scoreBoxX = 100;
-        this.scoreValueText = this.add.text(scoreBoxX, centerY, '0', {
-            fontFamily: FONT_PIXEL,
-            fontSize: '18px',
-            color: C.SCORE_VAL
-        }).setOrigin(0.5, -0.5).setResolution(4);
-
-        // 3. Mahkota / Crown Icon (tengah)
-        this.crownIcon = this.add.image(180, centerY, 'mahkota')
-            .setScale(0.05)
-            .setOrigin(0.5, 0.4);
-
-        // 4. Skor Terbaik Value (kanan-tengah) — Teks angka saja, jernih & tajam
-        const bestBoxX = 260;
-        this.highScoreValueText = this.add.text(bestBoxX, centerY, `${this.highScore}`, {
-            fontFamily: FONT_PIXEL,
-            fontSize: '18px',
-            color: C.BEST_VAL
-        }).setOrigin(0.5, -0.5).setResolution(4);
-
-        // 5. Tombol Pause (kanan)
-        this.pauseBtn = this.add.container(328, centerY + 45).setDepth(25);
+        // 4. Tombol Pause (paling kanan atas)
+        this.pauseBtn = this.add.container(332, topY).setDepth(25);
         
         const pauseBg = this.add.graphics();
         pauseBg.fillStyle(0xffffff, 1);
-        pauseBg.fillRoundedRect(-15, -15, 30, 30, 8);
+        pauseBg.fillRoundedRect(-14, -14, 28, 28, 7);
         pauseBg.lineStyle(1, C.CELL_BORDER, 0.8);
-        pauseBg.strokeRoundedRect(-15, -15, 30, 30, 8);
+        pauseBg.strokeRoundedRect(-14, -14, 28, 28, 7);
         this.pauseBtn.add(pauseBg);
 
         this.pauseIconGraphics = this.add.graphics();
         this.pauseIconGraphics.fillStyle(0x1e293b, 1);
-        this.pauseIconGraphics.fillRect(-4.5, -6, 3, 12);
-        this.pauseIconGraphics.fillRect(1.5, -6, 3, 12);
+        this.pauseIconGraphics.fillRect(-4, -5, 2.5, 10);
+        this.pauseIconGraphics.fillRect(1.5, -5, 2.5, 10);
         this.pauseBtn.add(this.pauseIconGraphics);
 
-        const pauseZone = this.add.zone(0, 0, 34, 34)
+        const pauseZone = this.add.zone(0, 0, 32, 32)
             .setInteractive({ useHandCursor: true });
         this.pauseBtn.add(pauseZone);
 
@@ -197,6 +199,27 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 this._togglePause(true);
             }
         });
+
+        // 5. Score Value (kiri-tengah) — Teks angka saja, jernih & tajam
+        const scoreBoxX = 100;
+        this.scoreValueText = this.add.text(scoreBoxX, scoreY, '0', {
+            fontFamily: FONT_PIXEL,
+            fontSize: '18px',
+            color: C.SCORE_VAL
+        }).setOrigin(0.5, 0.5).setResolution(4);
+
+        // 6. Mahkota / Crown Icon (tengah)
+        this.crownIcon = this.add.image(180, scoreY, 'mahkota')
+            .setScale(0.05)
+            .setOrigin(0.5, 0.5);
+
+        // 7. Skor Terbaik Value (kanan-tengah) — Teks angka saja, jernih & tajam
+        const bestBoxX = 260;
+        this.highScoreValueText = this.add.text(bestBoxX, scoreY, `${this.highScore}`, {
+            fontFamily: FONT_PIXEL,
+            fontSize: '18px',
+            color: C.BEST_VAL
+        }).setOrigin(0.5, 0.5).setResolution(4);
     }
 
     _drawAudioIcon() {
@@ -872,7 +895,17 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.audio.playPlace();
         triggerHaptic(18);
 
-        const bombsToDetonate = [];
+        // Catat koordinat sel yang sudah terisi SEBELUM menaruh balok ini
+        const preExistingOccupied = new Set();
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                if (this.board[r][c] !== null) {
+                    preExistingOccupied.add(`${r},${c}`);
+                }
+            }
+        }
+
+        const placedBombs = [];
 
         shapeData.cells.forEach(([c, r, colorObj]) => {
             const row = targetRow + r;
@@ -886,7 +919,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
             } else if (colorObj && colorObj.isSpecial === 'bomb') {
                 this.boardSpecial[row][col] = 'bomb';
                 this.boardSprite[row][col] = null;
-                bombsToDetonate.push({ col, row });
+                placedBombs.push({ col, row });
             } else {
                 this.boardSpecial[row][col] = null;
                 if (colorObj && colorObj.useSprite) {
@@ -916,10 +949,36 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.slotContainers[slotIndex] = null;
         this.slotPieces[slotIndex] = null;
 
-        // Handle Bomb Detonation if placed
+        // Cek apakah bom harus meledak langsung (jika ada blok lain di sekitarnya)
+        // atau tetap bertahan sebagai bom siaga aktif (jika ditaruh di area kosong)
+        const immediateBombsToDetonate = [];
+        placedBombs.forEach(({ col, row }) => {
+            let neighborPreExistingCount = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                        if (preExistingOccupied.has(`${nr},${nc}`)) {
+                            neighborPreExistingCount++;
+                        }
+                    }
+                }
+            }
+
+            if (neighborPreExistingCount > 0) {
+                immediateBombsToDetonate.push({ col, row });
+            } else {
+                // Bom ditaruh di area kosong: jangan hancurkan diri sendiri, jadikan bom siaga
+                const bx = GRID_START_X + col * GRID_STEP + CELL_SIZE / 2;
+                const by = GRID_START_Y + row * GRID_STEP - 6;
+                this._floatText('💣 BOM SIAP!', bx, by);
+            }
+        });
+
         let bombed = false;
-        if (bombsToDetonate.length > 0) {
-            bombed = this._detonateBombs(bombsToDetonate);
+        if (immediateBombsToDetonate.length > 0) {
+            bombed = this._detonateBombs(immediateBombsToDetonate);
         }
 
         const isMatch = this._resolveMatches();
@@ -1203,12 +1262,28 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         const flash = this.add.graphics().setDepth(15);
         const clearedCells = [];
+        const bombsTriggered = [];
+
         toClear.forEach(key => {
             const [r, c] = key.split(',').map(Number);
             const x = GRID_START_X + c * GRID_STEP;
             const y = GRID_START_Y + r * GRID_STEP;
             
             const colorNum = this.board[r][c] || 0xcbd5e1;
+
+            // Deteksi jika sel yang dibersihkan atau tetangganya adalah bom aktif
+            const dirs = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of dirs) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                    if (this.boardSpecial[nr][nc] === 'bomb') {
+                        if (!bombsTriggered.some(b => b.col === nc && b.row === nr)) {
+                            bombsTriggered.push({ col: nc, row: nr });
+                        }
+                    }
+                }
+            }
 
             flash.fillStyle(0xffffff, 0.7);
             flash.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
@@ -1221,6 +1296,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this._renderBoardFills();
         clearedCells.forEach(([x, y, colorNum]) => this._spawnClearParticle(x, y, colorNum));
+
+        // Jika ada bom siaga yang terpicu oleh match ini, ledakkan secara berantai
+        if (bombsTriggered.length > 0) {
+            this.time.delayedCall(160, () => {
+                this._detonateBombs(bombsTriggered);
+            });
+        }
 
         this.tweens.add({
             targets: flash, alpha: 0, duration: 150, ease: 'Linear',

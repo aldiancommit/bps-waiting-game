@@ -37,13 +37,13 @@ export class RetroAudio {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioContext();
 
-            // Mastering Limiter (Soft-knee safety limiter, does NOT duck volume during cascades)
+            // Mastering Safety Limiter (Clean transparent limiter with fast release, prevents voice clipping)
             this.compressor = this.ctx.createDynamicsCompressor();
-            this.compressor.threshold.setValueAtTime(-2, this.ctx.currentTime);
-            this.compressor.knee.setValueAtTime(12, this.ctx.currentTime);
-            this.compressor.ratio.setValueAtTime(4, this.ctx.currentTime);
+            this.compressor.threshold.setValueAtTime(-1, this.ctx.currentTime);
+            this.compressor.knee.setValueAtTime(6, this.ctx.currentTime);
+            this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
             this.compressor.attack.setValueAtTime(0.001, this.ctx.currentTime);
-            this.compressor.release.setValueAtTime(0.05, this.ctx.currentTime);
+            this.compressor.release.setValueAtTime(0.04, this.ctx.currentTime);
 
             this.masterGain = this.ctx.createGain();
             this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
@@ -60,6 +60,10 @@ export class RetroAudio {
         return this.compressor || this.ctx?.destination;
     }
 
+    _getNow() {
+        return (this.ctx?.currentTime || 0) + 0.005; // 5ms lookahead prevents past-time drops on mobile
+    }
+
     /**
      * Crisp, snappy 8-bit pickup blip.
      */
@@ -68,7 +72,7 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
@@ -77,13 +81,13 @@ export class RetroAudio {
             osc.frequency.setValueAtTime(783.99, now + 0.025);
             osc.frequency.setValueAtTime(1046.50, now + 0.05);
 
-            gain.gain.setValueAtTime(0.12, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.linearRampToValueAtTime(0.0001, now + 0.075);
 
             osc.connect(gain);
             gain.connect(this._getOut());
             osc.start(now);
-            osc.stop(now + 0.07);
+            osc.stop(now + 0.075);
         } catch (e) { }
     }
 
@@ -95,21 +99,21 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(280, now);
-            osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
+            osc.frequency.exponentialRampToValueAtTime(65, now + 0.085);
 
-            gain.gain.setValueAtTime(0.24, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+            gain.gain.setValueAtTime(0.26, now);
+            gain.gain.linearRampToValueAtTime(0.0001, now + 0.085);
 
             osc.connect(gain);
             gain.connect(this._getOut());
             osc.start(now);
-            osc.stop(now + 0.08);
+            osc.stop(now + 0.085);
         } catch (e) { }
     }
 
@@ -121,10 +125,10 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
             const scale = [523.25, 659.25, 783.99, 987.77, 1046.50, 1318.51, 1567.98];
             const count = Math.min(scale.length, 3 + combo);
-            const step = Math.max(0.035, 0.06 - combo * 0.004);
+            const step = Math.max(0.035, 0.055 - combo * 0.003);
 
             for (let i = 0; i < count; i++) {
                 const noteTime = now + (i * step);
@@ -134,9 +138,9 @@ export class RetroAudio {
                 osc.type = i % 2 === 0 ? 'square' : 'triangle';
                 osc.frequency.setValueAtTime(scale[i], noteTime);
 
-                const volume = 0.12 + Math.min(0.06, combo * 0.015);
+                const volume = 0.13 + Math.min(0.05, combo * 0.012);
                 gain.gain.setValueAtTime(volume, noteTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.14);
+                gain.gain.linearRampToValueAtTime(0.0001, noteTime + 0.14);
 
                 osc.connect(gain);
                 gain.connect(this._getOut());
@@ -154,10 +158,10 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime + 0.08;
+            const now = this._getNow() + 0.06;
             const chords = [659.25, 830.61, 1046.50, 1318.51];
             chords.forEach((freq, idx) => {
-                const noteTime = now + (idx * 0.04);
+                const noteTime = now + (idx * 0.038);
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
 
@@ -165,7 +169,7 @@ export class RetroAudio {
                 osc.frequency.setValueAtTime(freq, noteTime);
 
                 gain.gain.setValueAtTime(0.12, noteTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.18);
+                gain.gain.linearRampToValueAtTime(0.0001, noteTime + 0.18);
 
                 osc.connect(gain);
                 gain.connect(this._getOut());
@@ -176,49 +180,53 @@ export class RetroAudio {
     }
 
     /**
-     * Thunderous, punchy 8-bit bomb blast with 4-stage impact (transient, sub-bass, resonant noise, debris crackle).
+     * Thunderous, cinematic 8-bit arcade bomb blast:
+     * - Layer 1: Sub-Bass 808 pitch punch (240Hz -> 28Hz)
+     * - Layer 2: Transient shockwave crack (520Hz -> 40Hz)
+     * - Layer 3: Heavy resonant lowpass white noise blast (2800Hz -> 35Hz)
+     * - Layer 4: Debris sizzle crackle
      */
     playBombExplosion() {
         if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
 
-            // 1. Sharp Transient Punch Shockwave (450Hz -> 40Hz)
+            // 1. Transient Shockwave Slap (Square 520Hz -> 40Hz)
             const click = this.ctx.createOscillator();
             const clickGain = this.ctx.createGain();
             click.type = 'square';
-            click.frequency.setValueAtTime(450, now);
-            click.frequency.exponentialRampToValueAtTime(40, now + 0.05);
-            clickGain.gain.setValueAtTime(0.45, now);
-            clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+            click.frequency.setValueAtTime(520, now);
+            click.frequency.exponentialRampToValueAtTime(40, now + 0.06);
+            clickGain.gain.setValueAtTime(0.50, now);
+            clickGain.gain.linearRampToValueAtTime(0.0001, now + 0.06);
             click.connect(clickGain);
             clickGain.connect(this._getOut());
             click.start(now);
-            click.stop(now + 0.05);
+            click.stop(now + 0.06);
 
-            // 2. Heavy Sub-Bass Boom (180Hz -> 25Hz rumbling boom)
+            // 2. Heavy Sub-Bass 808 Boom (Triangle 240Hz -> 26Hz)
             const sub = this.ctx.createOscillator();
             const subGain = this.ctx.createGain();
             sub.type = 'triangle';
-            sub.frequency.setValueAtTime(180, now);
-            sub.frequency.exponentialRampToValueAtTime(25, now + 0.40);
+            sub.frequency.setValueAtTime(240, now);
+            sub.frequency.exponentialRampToValueAtTime(26, now + 0.45);
 
-            subGain.gain.setValueAtTime(0.55, now);
-            subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.40);
+            subGain.gain.setValueAtTime(0.65, now);
+            subGain.gain.linearRampToValueAtTime(0.0001, now + 0.45);
 
             sub.connect(subGain);
             subGain.connect(this._getOut());
             sub.start(now);
-            sub.stop(now + 0.40);
+            sub.stop(now + 0.45);
 
-            // 3. Resonant Crackling White Noise Explosion
-            const bufferSize = Math.floor(this.ctx.sampleRate * 0.42);
+            // 3. Resonant Crackling White Noise Explosion (2800Hz -> 35Hz sweep)
+            const bufferSize = Math.floor(this.ctx.sampleRate * 0.45);
             const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.3);
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.2);
             }
 
             const noise = this.ctx.createBufferSource();
@@ -226,19 +234,20 @@ export class RetroAudio {
 
             const filter = this.ctx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(2000, now);
-            filter.frequency.exponentialRampToValueAtTime(40, now + 0.42);
+            filter.Q.setValueAtTime(3.0, now);
+            filter.frequency.setValueAtTime(2800, now);
+            filter.frequency.exponentialRampToValueAtTime(35, now + 0.45);
 
-            const gain = this.ctx.createGain();
-            gain.gain.setValueAtTime(0.50, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+            const noiseGain = this.ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.55, now);
+            noiseGain.gain.linearRampToValueAtTime(0.0001, now + 0.45);
 
             noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(this._getOut());
+            filter.connect(noiseGain);
+            noiseGain.connect(this._getOut());
 
             noise.start(now);
-            noise.stop(now + 0.42);
+            noise.stop(now + 0.45);
         } catch (e) { }
     }
 
@@ -250,7 +259,7 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
             const notes = [659.25, 783.99, 987.77, 1318.51, 1567.98];
             notes.forEach((freq, i) => {
                 const noteTime = now + (i * 0.03);
@@ -261,7 +270,7 @@ export class RetroAudio {
                 osc.frequency.setValueAtTime(freq, noteTime);
 
                 gain.gain.setValueAtTime(0.14, noteTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.16);
+                gain.gain.linearRampToValueAtTime(0.0001, noteTime + 0.16);
 
                 osc.connect(gain);
                 gain.connect(this._getOut());
@@ -279,7 +288,7 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
             const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
             chords.forEach((freq, idx) => {
                 const noteTime = now + (idx * 0.035);
@@ -290,7 +299,7 @@ export class RetroAudio {
                 osc.frequency.setValueAtTime(freq, noteTime);
 
                 gain.gain.setValueAtTime(0.14, noteTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.22);
+                gain.gain.linearRampToValueAtTime(0.0001, noteTime + 0.22);
 
                 osc.connect(gain);
                 gain.connect(this._getOut());
@@ -308,7 +317,7 @@ export class RetroAudio {
         this.init();
         if (!this.ctx) return;
         try {
-            const now = this.ctx.currentTime;
+            const now = this._getNow();
             const fanfare = [
                 { f: 523.25, d: 0.08, t: 0 },
                 { f: 392.00, d: 0.08, t: 0.08 },
@@ -327,7 +336,7 @@ export class RetroAudio {
                 osc.frequency.setValueAtTime(note.f, noteTime);
 
                 gain.gain.setValueAtTime(0.14, noteTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + note.d);
+                gain.gain.linearRampToValueAtTime(0.0001, noteTime + note.d);
 
                 osc.connect(gain);
                 gain.connect(this._getOut());
@@ -347,21 +356,21 @@ export class RetroAudio {
         try {
             const notes = [440, 392, 349, 293, 261, 196];
             for (let i = 0; i < notes.length; i++) {
-                const now = this.ctx.currentTime + (i * 0.12);
+                const noteTime = this._getNow() + (i * 0.12);
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
 
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(notes[i], now);
-                osc.frequency.linearRampToValueAtTime(notes[i] - 15, now + 0.14);
+                osc.frequency.setValueAtTime(notes[i], noteTime);
+                osc.frequency.linearRampToValueAtTime(notes[i] - 15, noteTime + 0.14);
 
-                gain.gain.setValueAtTime(0.12, now);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+                gain.gain.setValueAtTime(0.12, noteTime);
+                gain.gain.linearRampToValueAtTime(0.0001, noteTime + 0.15);
 
                 osc.connect(gain);
                 gain.connect(this._getOut());
-                osc.start(now);
-                osc.stop(now + 0.15);
+                osc.start(noteTime);
+                osc.stop(noteTime + 0.15);
             }
         } catch (e) { }
     }
