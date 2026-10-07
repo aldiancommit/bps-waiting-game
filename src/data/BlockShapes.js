@@ -11,6 +11,18 @@ export const ACTIVE_COLORS = [
     { id: 'color-purple', color: 0xc084fc, useSprite: 'kit-purple' }
 ];
 
+export const COLOR_RAINBOW = {
+    id: 'color-rainbow',
+    color: 0xffffff,
+    isSpecial: 'rainbow'
+};
+
+export const COLOR_BOMB = {
+    id: 'color-bomb',
+    color: 0x1e293b,
+    isSpecial: 'bomb'
+};
+
 export const BLOCK_COLORS = [...ACTIVE_COLORS];
 
 // 1-Cell (Dot)

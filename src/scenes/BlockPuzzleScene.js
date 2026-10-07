@@ -1,5 +1,15 @@
 import Phaser from 'phaser';
-import { ACTIVE_COLORS, POOL_1, POOL_2, POOL_3, POOL_4, POOL_5, shapeKey } from '../data/BlockShapes.js';
+import {
+    ACTIVE_COLORS,
+    COLOR_RAINBOW,
+    COLOR_BOMB,
+    POOL_1,
+    POOL_2,
+    POOL_3,
+    POOL_4,
+    POOL_5,
+    shapeKey
+} from '../data/BlockShapes.js';
 import {
     DPR,
     GRID_SIZE, CELL_SIZE, CELL_GAP, GRID_STEP,
@@ -51,6 +61,10 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.isPaused = false;
         this.comboStreak = 0;
 
+        this.feverGauge = 0;
+        this.isFeverActive = false;
+        this.feverTurnsLeft = 0;
+
         this.activeDragPiece = null;
         this.activeDragSlot = null;
         this.activePointerId = null;
@@ -59,6 +73,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
         // Parallel board tracking which cells use sprite rendering
         this.boardSprite = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+        // Parallel board tracking special block types ('rainbow' | 'bomb' | null)
+        this.boardSpecial = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
 
         this.slotPieces = [null, null, null];
         this.slotContainers = [null, null, null];
@@ -66,6 +82,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this._buildBackground();
         this._buildHeader();
+        this._buildFeverGauge();
         this._buildBoard();
         this._buildSlotCards();
         this._buildGhostLayer();
@@ -133,6 +150,116 @@ export class BlockPuzzleScene extends Phaser.Scene {
         });
     }
 
+    // ── Fever / Hyper Gauge UI ──────────────────────────────
+
+    _buildFeverGauge() {
+        this.feverContainer = this.add.container(180, 97).setDepth(20);
+
+        const trackW = 240, trackH = 8;
+        const trackX = -trackW / 2, trackY = -trackH / 2;
+
+        this.feverTrackGraphics = this.add.graphics();
+        this.feverTrackGraphics.fillStyle(0xe2e8f0, 1);
+        this.feverTrackGraphics.fillRoundedRect(trackX, trackY, trackW, trackH, 4);
+        this.feverTrackGraphics.lineStyle(1, 0xcbd5e1, 1);
+        this.feverTrackGraphics.strokeRoundedRect(trackX, trackY, trackW, trackH, 4);
+        this.feverContainer.add(this.feverTrackGraphics);
+
+        this.feverBarGraphics = this.add.graphics();
+        this.feverContainer.add(this.feverBarGraphics);
+
+        this.feverLabel = this.add.text(0, -9, 'FEVER GAUGE', {
+            fontFamily: FONT_PIXEL,
+            fontSize: '5px',
+            color: '#94a3b8'
+        }).setOrigin(0.5, 0.5).setResolution(4);
+        this.feverContainer.add(this.feverLabel);
+
+        // Burning golden aura around board
+        this.feverAuraBorder = this.add.graphics().setDepth(0).setVisible(false);
+
+        this._drawFeverBar();
+    }
+
+    _drawFeverBar() {
+        this.feverBarGraphics.clear();
+        const trackW = 240, trackH = 8;
+        const trackX = -trackW / 2, trackY = -trackH / 2;
+        const pct = Math.max(0, Math.min(100, this.feverGauge)) / 100;
+        const fillW = Math.max(0, (trackW - 2) * pct);
+
+        if (fillW > 0) {
+            if (this.isFeverActive) {
+                // Fiery blazing bar
+                this.feverBarGraphics.fillStyle(0xf59e0b, 1);
+                this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
+                this.feverBarGraphics.fillStyle(0xfef08a, 0.55);
+                this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, (trackH - 2) / 2, { tl: 3, tr: 3, bl: 0, br: 0 });
+                this.feverLabel.setText(`🔥 FEVER 2X (${this.feverTurnsLeft} MOVES) 🔥`).setColor('#ea580c');
+            } else {
+                // Blue to Amber charging bar
+                this.feverBarGraphics.fillStyle(pct >= 0.8 ? 0xf59e0b : 0x3b82f6, 1);
+                this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
+                this.feverBarGraphics.fillStyle(0xffffff, 0.3);
+                this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, (trackH - 2) / 2, { tl: 3, tr: 3, bl: 0, br: 0 });
+                this.feverLabel.setText(pct >= 1 ? '⚡ FEVER READY! ⚡' : 'FEVER GAUGE').setColor(pct >= 0.8 ? '#d97706' : '#94a3b8');
+            }
+        } else {
+            this.feverLabel.setText('FEVER GAUGE').setColor('#94a3b8');
+        }
+    }
+
+    _updateFever(amount) {
+        if (this.isFeverActive) return;
+
+        this.feverGauge = Math.min(100, this.feverGauge + amount);
+        this._drawFeverBar();
+
+        if (this.feverGauge >= 100) {
+            this._activateFeverMode();
+        }
+    }
+
+    _activateFeverMode() {
+        this.isFeverActive = true;
+        this.feverTurnsLeft = 6;
+        this.feverGauge = 100;
+        this.audio.playFeverStart();
+        triggerHaptic([40, 40, 80]);
+
+        this.cameras.main.shake(200, 0.008);
+        this._floatText('🔥 FEVER MODE 2X! 🔥', 180, 240);
+        this._spawnConfetti();
+
+        // Fiery pulsing board border
+        this.feverAuraBorder.clear();
+        this.feverAuraBorder.setVisible(true).setAlpha(0.85);
+        this.feverAuraBorder.lineStyle(4, 0xf59e0b, 0.85);
+        this.feverAuraBorder.strokeRoundedRect(BOARD_X - 4, BOARD_Y - 4, BOARD_W + 8, BOARD_H + 8, 8);
+
+        this.tweens.killTweensOf(this.feverAuraBorder);
+        this.tweens.add({
+            targets: this.feverAuraBorder,
+            alpha: { from: 0.95, to: 0.35 },
+            yoyo: true,
+            repeat: -1,
+            duration: 380,
+            ease: 'Sine.easeInOut'
+        });
+
+        this._drawFeverBar();
+    }
+
+    _deactivateFeverMode() {
+        this.isFeverActive = false;
+        this.feverTurnsLeft = 0;
+        this.feverGauge = 0;
+        this.tweens.killTweensOf(this.feverAuraBorder);
+        this.feverAuraBorder.setVisible(false);
+        this._drawFeverBar();
+        this._floatText('FEVER OVER', 180, 240);
+    }
+
     // ── Board 10×10 — abu-abu terang, bukan kit gelap ───────
 
     _buildBoard() {
@@ -176,8 +303,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 if (color !== null) {
                     const x = GRID_START_X + c * GRID_STEP;
                     const y = GRID_START_Y + r * GRID_STEP;
+                    const special = this.boardSpecial[r][c];
 
-                    if (this.boardSprite[r][c]) {
+                    if (special === 'rainbow') {
+                        this._drawPixelCell(this.boardFillGraphics, x, y, color, 1, 'rainbow');
+                    } else if (special === 'bomb') {
+                        this._drawPixelCell(this.boardFillGraphics, x, y, color, 1, 'bomb');
+                    } else if (this.boardSprite[r][c]) {
                         // Render as sprite cell from crop-blok
                         this._drawSpriteBoardCell(x, y, this.boardSprite[r][c]);
                     } else {
@@ -224,15 +356,60 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.ghostGraphics = this.add.graphics().setDepth(30).setVisible(false);
     }
 
-    // ── Pixel Cell Renderer (dengan inner shadow) ───────────
+    // ── Pixel Cell Renderer (dengan inner shadow & special block support) ──
 
-    _drawPixelCell(g, x, y, color, alpha = 1) {
-        g.fillStyle(color, alpha);
-        g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
-        
-        // Add a simple inner highlight for a bit of depth
-        g.lineStyle(2, 0xffffff, alpha * 0.2);
-        g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
+    _drawPixelCell(g, x, y, color, alpha = 1, specialType = null) {
+        if (specialType === 'rainbow') {
+            const half = CELL_SIZE / 2;
+            g.fillStyle(0xef4444, alpha);
+            g.fillRoundedRect(x, y, half, half, { tl: 5, tr: 0, bl: 0, br: 0 });
+            g.fillStyle(0x3b82f6, alpha);
+            g.fillRoundedRect(x + half, y, half, half, { tl: 0, tr: 5, bl: 0, br: 0 });
+            g.fillStyle(0x22c55e, alpha);
+            g.fillRoundedRect(x, y + half, half, half, { tl: 0, tr: 0, bl: 5, br: 0 });
+            g.fillStyle(0xeab308, alpha);
+            g.fillRoundedRect(x + half, y + half, half, half, { tl: 0, tr: 0, bl: 0, br: 5 });
+
+            g.lineStyle(2, 0xffffff, alpha * 0.95);
+            g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
+
+            const cx = x + half, cy = y + half;
+            const sz = 3;
+            g.fillStyle(0xffffff, alpha);
+            g.fillRect(cx - sz / 2, cy - sz / 2, sz, sz);
+            g.fillRect(cx - sz / 2, cy - sz * 1.5, sz, sz);
+            g.fillRect(cx - sz / 2, cy + sz * 0.5, sz, sz);
+            g.fillRect(cx - sz * 1.5, cy - sz / 2, sz, sz);
+            g.fillRect(cx + sz * 0.5, cy - sz / 2, sz, sz);
+        } else if (specialType === 'bomb') {
+            g.fillStyle(0x1e293b, alpha);
+            g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+            
+            g.lineStyle(1.5, 0x0f172a, alpha);
+            g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
+
+            const half = CELL_SIZE / 2;
+            const cx = x + half, cy = y + half + 2;
+            g.fillStyle(0x0f172a, alpha);
+            g.fillCircle(cx, cy, 7);
+            g.fillStyle(0x475569, alpha);
+            g.fillCircle(cx - 2, cy - 2, 2.5);
+
+            // Fuse & spark
+            g.fillStyle(0x78350f, alpha);
+            g.fillRect(cx - 1.5, cy - 10, 3, 3);
+            g.fillStyle(0xef4444, alpha);
+            g.fillRect(cx + 1, cy - 12, 3, 3);
+            g.fillStyle(0xfacc15, alpha);
+            g.fillRect(cx + 2, cy - 11, 2, 2);
+        } else {
+            g.fillStyle(color, alpha);
+            g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+            
+            // Add a simple inner highlight for a bit of depth
+            g.lineStyle(2, 0xffffff, alpha * 0.2);
+            g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
+        }
     }
 
     // ── Card Helper (rounded, clean white) ──────────────────
@@ -321,7 +498,11 @@ export class BlockPuzzleScene extends Phaser.Scene {
             
             maskG.fillRoundedRect(bx, by, CELL_SIZE, CELL_SIZE, 5);
 
-            if (colorObj && colorObj.useSprite) {
+            if (colorObj && colorObj.isSpecial === 'rainbow') {
+                this._drawPixelCell(g, bx, by, colorObj.color, 1, 'rainbow');
+            } else if (colorObj && colorObj.isSpecial === 'bomb') {
+                this._drawPixelCell(g, bx, by, colorObj.color, 1, 'bomb');
+            } else if (colorObj && colorObj.useSprite) {
                 const img = this.add.image(bx, by, colorObj.useSprite)
                     .setOrigin(0, 0)
                     .setDisplaySize(CELL_SIZE, CELL_SIZE);
@@ -346,6 +527,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
             return ACTIVE_COLORS.find(activeColor => activeColor.color === colorObj) || null;
         }
         if (!colorObj || typeof colorObj !== 'object') return null;
+        if (colorObj.isSpecial === 'rainbow') return COLOR_RAINBOW;
+        if (colorObj.isSpecial === 'bomb') return COLOR_BOMB;
         return ACTIVE_COLORS.find(activeColor =>
             activeColor.id === colorObj.id ||
             activeColor.color === colorObj.color ||
@@ -512,9 +695,22 @@ export class BlockPuzzleScene extends Phaser.Scene {
         shapeData.cells.forEach(([c, r, colorObj]) => {
             const x = GRID_START_X + (targetCol + c) * GRID_STEP;
             const y = GRID_START_Y + (targetRow + r) * GRID_STEP;
-            const fallbackColor = colorObj ? colorObj.color : 0xcbd5e1;
-            this.ghostGraphics.fillStyle(fallbackColor, 0.35);
-            this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+            
+            if (colorObj && colorObj.isSpecial === 'rainbow') {
+                this.ghostGraphics.fillStyle(0xffffff, 0.45);
+                this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+                this.ghostGraphics.lineStyle(2, 0xfacc15, 0.9);
+                this.ghostGraphics.strokeRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+            } else if (colorObj && colorObj.isSpecial === 'bomb') {
+                this.ghostGraphics.fillStyle(0xef4444, 0.4);
+                this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+                this.ghostGraphics.lineStyle(2, 0x1e293b, 0.9);
+                this.ghostGraphics.strokeRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+            } else {
+                const fallbackColor = colorObj ? colorObj.color : 0xcbd5e1;
+                this.ghostGraphics.fillStyle(fallbackColor, 0.35);
+                this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+            }
         });
     }
 
@@ -544,20 +740,40 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.audio.playPlace();
         triggerHaptic(18);
 
+        const bombsToDetonate = [];
+
         shapeData.cells.forEach(([c, r, colorObj]) => {
+            const row = targetRow + r;
+            const col = targetCol + c;
             const fallbackColor = colorObj ? colorObj.color : 0xcbd5e1;
-            this.board[targetRow + r][targetCol + c] = fallbackColor;
+            this.board[row][col] = fallbackColor;
             
-            // Track sprite info for sprite cells
-            if (colorObj && colorObj.useSprite) {
-                this.boardSprite[targetRow + r][targetCol + c] = colorObj.useSprite;
+            if (colorObj && colorObj.isSpecial === 'rainbow') {
+                this.boardSpecial[row][col] = 'rainbow';
+                this.boardSprite[row][col] = null;
+            } else if (colorObj && colorObj.isSpecial === 'bomb') {
+                this.boardSpecial[row][col] = 'bomb';
+                this.boardSprite[row][col] = null;
+                bombsToDetonate.push({ col, row });
             } else {
-                this.boardSprite[targetRow + r][targetCol + c] = null;
+                this.boardSpecial[row][col] = null;
+                if (colorObj && colorObj.useSprite) {
+                    this.boardSprite[row][col] = colorObj.useSprite;
+                } else {
+                    this.boardSprite[row][col] = null;
+                }
             }
         });
 
         this._renderBoardFills();
-        this._addScore(shapeData.cells.length);
+        
+        // Placement score with Fever multiplier
+        const basePlaceScore = shapeData.cells.length;
+        const placeScore = this.isFeverActive ? basePlaceScore * 2 : basePlaceScore;
+        this._addScore(placeScore);
+
+        // Charge Fever meter on placement
+        this._updateFever(5);
 
         // Tactile micro-shake on placing piece
         this.cameras.main.shake(35, 0.0008);
@@ -568,13 +784,118 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.slotContainers[slotIndex] = null;
         this.slotPieces[slotIndex] = null;
 
+        // Handle Bomb Detonation if placed
+        let bombed = false;
+        if (bombsToDetonate.length > 0) {
+            bombed = this._detonateBombs(bombsToDetonate);
+        }
+
         const isMatch = this._resolveMatches();
 
-        this._shakeCrown(isMatch ? 'big' : 'small');
+        this._shakeCrown(isMatch || bombed ? 'big' : 'small');
+
+        // Step fever moves counter if fever active
+        if (this.isFeverActive) {
+            this.feverTurnsLeft--;
+            this.feverGauge = Math.max(0, (this.feverTurnsLeft / 6) * 100);
+            this._drawFeverBar();
+            if (this.feverTurnsLeft <= 0) {
+                this._deactivateFeverMode();
+            }
+        }
 
         if (this.slotPieces.every(piece => piece === null)) this.spawnSlotPieces();
 
         this._checkGameOver();
+    }
+
+    _detonateBombs(bombList) {
+        const cellsToBlast = new Set();
+
+        bombList.forEach(({ col, row }) => {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                        if (this.board[nr][nc] !== null) {
+                            cellsToBlast.add(`${nr},${nc}`);
+                        }
+                    }
+                }
+            }
+        });
+
+        if (cellsToBlast.size === 0) return false;
+
+        this.audio.playBombExplosion();
+        triggerHaptic([50, 50, 80]);
+        this.cameras.main.shake(250, 0.012);
+
+        const baseBombScore = cellsToBlast.size * 15;
+        const bombScore = this.isFeverActive ? baseBombScore * 2 : baseBombScore;
+        this._addScore(bombScore);
+        this._updateFever(20);
+
+        this._floatText('BOOM! 3x3 BLAST!', 180, 260);
+        this._floatText(`+${bombScore}`, 180, 285);
+
+        const flash = this.add.graphics().setDepth(20);
+        const clearedCells = [];
+
+        cellsToBlast.forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            const x = GRID_START_X + c * GRID_STEP;
+            const y = GRID_START_Y + r * GRID_STEP;
+            const colorNum = this.board[r][c] || 0xcbd5e1;
+
+            flash.fillStyle(0xffffff, 0.85);
+            flash.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+
+            clearedCells.push([x, y, colorNum]);
+            this.board[r][c] = null;
+            this.boardSprite[r][c] = null;
+            this.boardSpecial[r][c] = null;
+        });
+
+        this._renderBoardFills();
+        clearedCells.forEach(([x, y, colorNum]) => this._spawnBombBlastParticle(x, y, colorNum));
+
+        this.tweens.add({
+            targets: flash,
+            alpha: 0,
+            duration: 200,
+            ease: 'Linear',
+            onComplete: () => flash.destroy()
+        });
+
+        return true;
+    }
+
+    _spawnBombBlastParticle(x, y, color) {
+        const blastColors = [0xef4444, 0xf97316, 0xfacc15, 0x1e293b];
+        for (let i = 0; i < 5; i++) {
+            const p = this.add.graphics().setDepth(55);
+            const sz = Phaser.Math.Between(3, 7);
+            p.fillStyle(Phaser.Utils.Array.GetRandom(blastColors), 1);
+            p.fillRect(-sz / 2, -sz / 2, sz, sz);
+            p.setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Phaser.Math.Between(20, 50);
+
+            this.tweens.add({
+                targets: p,
+                x: p.x + Math.cos(angle) * dist,
+                y: p.y + Math.sin(angle) * dist,
+                alpha: 0,
+                scaleX: 0.2,
+                scaleY: 0.2,
+                duration: Phaser.Math.Between(300, 550),
+                ease: 'Cubic.easeOut',
+                onComplete: () => p.destroy()
+            });
+        }
     }
 
     // ── Efek partikel saat menaruh balok ─────────────────────
@@ -619,48 +940,76 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
     }
 
-    // ── Line Clear ──────────────────────────────────────────
+    // ── Line / Color Clear ──────────────────────────────────
 
     _findMatchCells() {
-        const visited = new Set();
         const matchedCells = new Set();
-        
-        for (let r = 0; r < GRID_SIZE; r++) {
-            for (let c = 0; c < GRID_SIZE; c++) {
-                const colorValue = this.board[r][c];
-                if (colorValue === null) continue;
-                
-                const key = `${r},${c}`;
-                if (visited.has(key)) continue;
-                
-                const group = [];
-                const queue = [[r, c]];
-                visited.add(key);
-                
-                while (queue.length > 0) {
-                    const [currR, currC] = queue.shift();
-                    group.push(`${currR},${currC}`);
-                    
-                    const dirs = [[0,1], [1,0], [0,-1], [-1,0]];
-                    for (const [dr, dc] of dirs) {
-                        const nr = currR + dr;
-                        const nc = currC + dc;
-                        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
-                            if (this.board[nr][nc] === colorValue) {
+        let hasRainbowInMatch = false;
+
+        for (const activeColor of ACTIVE_COLORS) {
+            const targetVal = activeColor.color;
+            const visitedForColor = new Set();
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const key = `${r},${c}`;
+                    if (visitedForColor.has(key)) continue;
+
+                    const cellColor = this.board[r][c];
+                    const special = this.boardSpecial[r][c];
+
+                    // Candidate if cell is targetColor OR is Rainbow wildcard
+                    const isCandidate = cellColor !== null && (cellColor === targetVal || special === 'rainbow');
+                    if (!isCandidate) continue;
+
+                    const group = [];
+                    let nonRainbowCount = 0;
+                    let rainbowCount = 0;
+                    const queue = [[r, c]];
+                    visitedForColor.add(key);
+
+                    while (queue.length > 0) {
+                        const [currR, currC] = queue.shift();
+                        group.push(`${currR},${currC}`);
+                        if (this.boardSpecial[currR][currC] === 'rainbow') {
+                            rainbowCount++;
+                        } else {
+                            nonRainbowCount++;
+                        }
+
+                        const dirs = [[0,1], [1,0], [0,-1], [-1,0]];
+                        for (const [dr, dc] of dirs) {
+                            const nr = currR + dr;
+                            const nc = currC + dc;
+                            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
                                 const nKey = `${nr},${nc}`;
-                                if (!visited.has(nKey)) {
-                                    visited.add(nKey);
-                                    queue.push([nr, nc]);
+                                if (!visitedForColor.has(nKey)) {
+                                    const nColor = this.board[nr][nc];
+                                    const nSpecial = this.boardSpecial[nr][nc];
+                                    if (nColor !== null && (nColor === targetVal || nSpecial === 'rainbow')) {
+                                        visitedForColor.add(nKey);
+                                        queue.push([nr, nc]);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                
-                if (group.length >= 3) {
-                    group.forEach(k => matchedCells.add(k));
+
+                    if (group.length >= 3 && (nonRainbowCount > 0 || rainbowCount >= 3)) {
+                        group.forEach(k => {
+                            matchedCells.add(k);
+                            const [gr, gc] = k.split(',').map(Number);
+                            if (this.boardSpecial[gr][gc] === 'rainbow') {
+                                hasRainbowInMatch = true;
+                            }
+                        });
+                    }
                 }
             }
+        }
+
+        if (hasRainbowInMatch && matchedCells.size > 0) {
+            this.audio.playRainbowMatch();
         }
 
         return matchedCells;
@@ -697,8 +1046,12 @@ export class BlockPuzzleScene extends Phaser.Scene {
         triggerHaptic(toClear.size >= 5 ? [30, 40, 60] : 30);
 
         const comboBonus = (this.comboStreak > 1) ? this.comboStreak * 5 : 0;
-        const lineScore = (toClear.size * 10) + comboBonus;
+        const baseLineScore = (toClear.size * 10) + comboBonus;
+        const lineScore = this.isFeverActive ? baseLineScore * 2 : baseLineScore;
         this._addScore(lineScore);
+
+        // Charge Fever Gauge on match / combo
+        this._updateFever(this.comboStreak > 1 ? 25 : 15);
 
         // Dynamic and juicy camera shake
         if (this.comboStreak > 1) {
@@ -715,7 +1068,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         if (this.comboStreak > 1) {
             this._floatText(`STREAK x${this.comboStreak}!`, 180, 285);
         }
-        this._floatText(`+${lineScore}`, 180, toClear.size >= 5 ? 310 : 265);
+        this._floatText(`+${lineScore}${this.isFeverActive ? ' [2X]' : ''}`, 180, toClear.size >= 5 ? 310 : 265);
 
         const flash = this.add.graphics().setDepth(15);
         const clearedCells = [];
@@ -732,6 +1085,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
             clearedCells.push([x, y, colorNum]);
             this.board[r][c] = null;
             this.boardSprite[r][c] = null;
+            this.boardSpecial[r][c] = null;
         });
 
         this._renderBoardFills();
@@ -859,6 +1213,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
      * Colorize piece with STRICT RULE:
      * No single color may appear more than 2 times in any piece (max 2 per color).
      * Synergizes with neighboring board cells to reward strategic placement.
+     * Incorporates special power-up blocks (Rainbow Wildcard & Bomb).
      */
     _colorizePiece(shapeCells) {
         const placements = this._getValidPlacements(shapeCells);
@@ -993,6 +1348,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
                     assignedColors[i] = spare;
                 }
             }
+        }
+
+        // Special Block Roll (Rainbow Wildcard / Bomb)
+        const specialSpawnChance = this.isFeverActive ? 0.32 : 0.12;
+        if (Math.random() < specialSpawnChance) {
+            const specialBlock = Math.random() < 0.55 ? COLOR_RAINBOW : COLOR_BOMB;
+            const specialIndex = Phaser.Math.Between(0, assignedColors.length - 1);
+            assignedColors[specialIndex] = specialBlock;
         }
 
         return shapeCells.map(([cx, cy], idx) => [cx, cy, assignedColors[idx]]);
@@ -1479,9 +1842,20 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.score = 0;
         this._syncScoreUI();
 
+        // Reset Fever state
+        this.feverGauge = 0;
+        this.isFeverActive = false;
+        this.feverTurnsLeft = 0;
+        if (this.feverAuraBorder) {
+            this.tweens.killTweensOf(this.feverAuraBorder);
+            this.feverAuraBorder.setVisible(false);
+        }
+        this._drawFeverBar();
+
         for (let r = 0; r < GRID_SIZE; r++) {
             this.board[r].fill(null);
             this.boardSprite[r].fill(null);
+            this.boardSpecial[r].fill(null);
         }
         this._renderBoardFills();
 

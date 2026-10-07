@@ -71,7 +71,6 @@ export class RetroAudio {
 
     /**
      * Joyful ascending arpeggio chime on line/cluster clear.
-     * Scales notes and sparkle complexity with combo streak.
      */
     playLineClear(combo = 1) {
         this.init();
@@ -130,6 +129,113 @@ export class RetroAudio {
     }
 
     /**
+     * Explosive retro bomb blast with low frequency rumble and noise burst.
+     */
+    playBombExplosion() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const bufferSize = this.ctx.sampleRate * 0.25;
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, now);
+            filter.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            noise.start(now);
+            noise.stop(now + 0.25);
+
+            // Sub bass impact
+            const sub = this.ctx.createOscillator();
+            const subGain = this.ctx.createGain();
+            sub.type = 'triangle';
+            sub.frequency.setValueAtTime(150, now);
+            sub.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+
+            subGain.gain.setValueAtTime(0.30, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            sub.connect(subGain);
+            subGain.connect(this.ctx.destination);
+            sub.start(now);
+            sub.stop(now + 0.25);
+        } catch (e) { }
+    }
+
+    /**
+     * Shimmering rainbow wildcard match sparkle.
+     */
+    playRainbowMatch() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const notes = [659.25, 783.99, 987.77, 1318.51, 1567.98];
+            notes.forEach((freq, i) => {
+                const noteTime = now + (i * 0.03);
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, noteTime);
+
+                gain.gain.setValueAtTime(0.12, noteTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.16);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(noteTime);
+                osc.stop(noteTime + 0.16);
+            });
+        } catch (e) { }
+    }
+
+    /**
+     * High-energy 8-bit hyper fanfare charge when Fever Mode is triggered.
+     */
+    playFeverStart() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+            chords.forEach((freq, idx) => {
+                const noteTime = now + (idx * 0.035);
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, noteTime);
+
+                gain.gain.setValueAtTime(0.12, noteTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.22);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(noteTime);
+                osc.stop(noteTime + 0.22);
+            });
+        } catch (e) { }
+    }
+
+    /**
      * Grand triumphant 8-bit victory arpeggio for stage score milestones.
      */
     playMilestone() {
@@ -137,7 +243,6 @@ export class RetroAudio {
         if (!this.ctx) return;
         try {
             const now = this.ctx.currentTime;
-            // Fanfare notes: C5, G4, C5, E5, G5, C6
             const fanfare = [
                 { f: 523.25, d: 0.08, t: 0 },
                 { f: 392.00, d: 0.08, t: 0.08 },
