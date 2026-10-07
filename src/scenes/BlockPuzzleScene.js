@@ -35,6 +35,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
     preload() {
         this.load.image('logo-bps', '/assets/logo-bps.webp');
         this.load.image('mahkota', '/assets/mahkota-icon.webp');
+        this.load.image('restart-icon', '/assets/restart-icon.webp');
         
         const kitPath = '/assets/block-puzzle-kit/addons/block_puzzle_kit/art/glossy/hd';
         this.load.image('kit-red', `${kitPath}/red.webp`);
@@ -2026,8 +2027,11 @@ export class BlockPuzzleScene extends Phaser.Scene {
             iconG.fillStyle(0x1e293b, 1);
             iconG.fillTriangle(-5, -10, -5, 10, 8, 0);
         } else if (type === 'restart') {
-            // Gambar Ikon Restart/Refresh Geometris Murni
-            this._drawRestartIcon(iconG, 0, 0, 11, 0x1e293b, 3.2);
+            // Ikon Restart dari aset resmi restart-icon.webp
+            const restartImg = this.add.image(0, 0, 'restart-icon')
+                .setDisplaySize(28, 28)
+                .setOrigin(0.5);
+            container.add(restartImg);
         } else if (type === 'audio') {
             this.pauseAudioIconGraphics = iconG;
             this._drawCardAudioIcon();
@@ -2081,52 +2085,6 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this.pauseAudioIconGraphics.arc(0, 0, 12, -Math.PI / 3, Math.PI / 3, false);
             this.pauseAudioIconGraphics.strokePath();
         }
-    }
-
-    /**
-     * Menggambar ikon 'restart/refresh' geometris presisi menggunakan Phaser Graphics.
-     */
-    _drawRestartIcon(graphics, x, y, radius = 11.5, color = 0x1e293b, lineThickness = 3.2) {
-        // 1. Gambar Busur Lingkaran
-        graphics.lineStyle(lineThickness, color, 1);
-        graphics.beginPath();
-        
-        // Mulai dari jam 8 (kiri bawah) ke jam 4 (kanan bawah) searah jarum jam
-        const startAngle = Math.PI * 0.75;
-        const endAngle = Math.PI * 2.25; 
-        
-        graphics.arc(x, y, radius, startAngle, endAngle, false);
-        graphics.strokePath();
-
-        // 2. Tentukan koordinat titik ujung busur di kanan bawah
-        const arrowX = x + Math.cos(endAngle) * radius;
-        const arrowY = y + Math.sin(endAngle) * radius;
-
-        // 3. Gambar Kepala Panah dengan kalkulasi sudut rotasi otomatis (Tangent)
-        const arrowAngle = endAngle + Math.PI / 2; 
-        const arrowSize = 6; // Besaran kepala panah
-
-        graphics.fillStyle(color, 1);
-        graphics.beginPath();
-        
-        // Ujung depan panah
-        graphics.moveTo(
-            arrowX + Math.cos(arrowAngle) * arrowSize,
-            arrowY + Math.sin(arrowAngle) * arrowSize
-        );
-        // Sisi kiri belakang panah
-        graphics.lineTo(
-            arrowX + Math.cos(arrowAngle - 2.5) * arrowSize,
-            arrowY + Math.sin(arrowAngle - 2.5) * arrowSize
-        );
-        // Sisi kanan belakang panah
-        graphics.lineTo(
-            arrowX + Math.cos(arrowAngle + 2.5) * arrowSize,
-            arrowY + Math.sin(arrowAngle + 2.5) * arrowSize
-        );
-        
-        graphics.closePath();
-        graphics.fillPath();
     }
 
     _togglePause(paused) {
