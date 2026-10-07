@@ -6,8 +6,12 @@ import { BlockPuzzleScene } from './scenes/BlockPuzzleScene.js';
  * Pixel Art Theme
  */
 
-const GAME_WIDTH = 360;
-const GAME_HEIGHT = 640;
+const DPR = typeof window !== 'undefined'
+    ? Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
+    : 2;
+
+const GAME_WIDTH = 360 * DPR;
+const GAME_HEIGHT = 640 * DPR;
 
 const config = {
     type: Phaser.AUTO,
@@ -23,10 +27,10 @@ const config = {
         expandParent: true
     },
     render: {
-        antialias: false,
-        antialiasGL: false,
-        pixelArt: true,
-        roundPixels: true,
+        antialias: true,
+        antialiasGL: true,
+        pixelArt: false,
+        roundPixels: false,
         powerPreference: 'high-performance'
     },
     input: {
@@ -43,6 +47,8 @@ if (document.fonts && document.fonts.load) {
     Promise.race([
         Promise.all([
             document.fonts.load('10px "Public Pixel"'),
+            document.fonts.load('800 15px "Plus Jakarta Sans"'),
+            document.fonts.load('700 10px "Plus Jakarta Sans"'),
             document.fonts.ready
         ]),
         new Promise(resolve => setTimeout(resolve, 1500))

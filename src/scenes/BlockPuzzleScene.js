@@ -33,7 +33,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('logo-bps', '/assets/logo-bps.png');
+        this.load.image('logo-bps', '/assets/logo-bps-clean.png');
         this.load.image('mahkota', '/assets/mahkota-icon.png');
         this.load.image('pause', '/assets/pause.png');
         
@@ -50,6 +50,11 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     create() {
+        // High-DPI Camera scaling: renders full scene at crisp native display resolution
+        const dpr = this.game.config.width / 360;
+        this.cameras.main.setZoom(dpr);
+        this.cameras.main.centerOn(180, 320);
+
         const maskG = this.make.graphics();
         maskG.fillStyle(0xffffff, 1);
         maskG.fillRoundedRect(0, 0, CELL_SIZE, CELL_SIZE, 5);
@@ -116,26 +121,26 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const topY = 20;    // Baris atas: Grup BPS (Logo + Teks) & Tombol Kontrol
         const scoreY = 62;  // Baris tengah: Skor, Mahkota, dan Rekor
 
-        // 1. Logo BPS (kiri atas, diperjelas & diperbesar dengan filter linear anti-blur)
-        this.bpsLogo = this.add.image(24, topY, 'logo-bps')
-            .setScale(0.055)
-            .setOrigin(0.5, 0.5)
+        // 1. Logo BPS (kiri atas, proporsional, tajam & bersih)
+        this.bpsLogo = this.add.image(18, topY, 'logo-bps')
+            .setDisplaySize(34, 26)
+            .setOrigin(0, 0.5)
             .setDepth(25);
 
         // 2. Teks Grup BPS (di samping logo BPS, font modern sans-serif non-pixel resolusi tinggi)
-        this.bpsTitle = this.add.text(46, topY - 7, 'BPS', {
+        this.bpsTitle = this.add.text(58, topY - 7, 'BPS', {
             fontFamily: FONT_UI,
             fontSize: '15px',
             fontWeight: '800',
             color: C.SCORE_VAL
-        }).setOrigin(0, 0.5).setResolution(4).setDepth(25);
+        }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
-        this.bpsSubtitle = this.add.text(46, topY + 8, 'Badan Pusat Statistik', {
+        this.bpsSubtitle = this.add.text(58, topY + 7, 'Badan Pusat Statistik', {
             fontFamily: FONT_UI,
-            fontSize: '8.5px',
-            fontWeight: '600',
+            fontSize: '9.5px',
+            fontWeight: '700',
             color: C.SCORE_VAL
-        }).setOrigin(0, 0.5).setResolution(4).setDepth(25);
+        }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
         // 3. Tombol Audio (kanan atas, sejajar dengan Grup BPS)
         this.audioBtn = this.add.container(288, topY).setDepth(25);
@@ -728,8 +733,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 this._cancelDrop();
                 return;
             }
-            this.activeDragPiece.x = pointer.x;
-            this.activeDragPiece.y = pointer.y + FINGER_OFFSET_Y;
+            this.activeDragPiece.x = pointer.worldX;
+            this.activeDragPiece.y = pointer.worldY + FINGER_OFFSET_Y;
             this._updateGhost(this.activeDragPiece);
         });
 
@@ -766,8 +771,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
             ease: 'Back.easeOut'
         });
 
-        container.x = pointer.x;
-        container.y = pointer.y + FINGER_OFFSET_Y;
+        container.x = pointer.worldX;
+        container.y = pointer.worldY + FINGER_OFFSET_Y;
         this._updateGhost(container);
     }
 
