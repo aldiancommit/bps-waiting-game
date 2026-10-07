@@ -56,6 +56,11 @@ export class BlockPuzzleScene extends Phaser.Scene {
         maskG.generateTexture('cell-mask', CELL_SIZE, CELL_SIZE);
         maskG.destroy();
 
+        // Enable crisp bilinear filter for high-res BPS logo to eliminate pixelated/blur artifacts
+        if (this.textures.exists('logo-bps')) {
+            this.textures.get('logo-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
+        }
+
         this.score = 0;
         this.highScore = getHighScore();
         this.isGameOver = false;
@@ -105,48 +110,48 @@ export class BlockPuzzleScene extends Phaser.Scene {
         g.fillRect(0, 0, 360, 640);
     }
 
-    // ── Header: Logo BPS + Teks — Kontrol — Skor — Mahkota — Rekor ────────────────
+    // ── Header: Grup BPS (Logo + 2 Teks) — Kontrol — Skor — Mahkota — Rekor ────────────────
 
     _buildHeader() {
-        const topY = 28;    // Baris atas: Logo BPS, Teks Instansi, dan Tombol Kontrol
-        const scoreY = 66;  // Baris tengah: Skor, Mahkota, dan Rekor
+        const topY = 20;    // Baris atas: Grup BPS (Logo + Teks) & Tombol Kontrol
+        const scoreY = 62;  // Baris tengah: Skor, Mahkota, dan Rekor
 
-        // 1. Logo BPS (kiri atas)
+        // 1. Logo BPS (kiri atas, diperjelas & diperbesar dengan filter linear anti-blur)
         this.bpsLogo = this.add.image(24, topY, 'logo-bps')
-            .setScale(0.048)
+            .setScale(0.055)
             .setOrigin(0.5, 0.5)
             .setDepth(25);
 
-        // 2. Teks "BPS" & "Badan Pusat Statistik" (di samping logo BPS, warna sama dengan teks skor)
-        this.bpsTitle = this.add.text(42, topY - 7, 'BPS', {
+        // 2. Teks Grup BPS (di samping logo BPS, font modern sans-serif non-pixel resolusi tinggi)
+        this.bpsTitle = this.add.text(46, topY - 7, 'BPS', {
             fontFamily: FONT_UI,
-            fontSize: '13px',
+            fontSize: '15px',
             fontWeight: '800',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(4).setDepth(25);
 
-        this.bpsSubtitle = this.add.text(42, topY + 7, 'Badan Pusat Statistik', {
+        this.bpsSubtitle = this.add.text(46, topY + 8, 'Badan Pusat Statistik', {
             fontFamily: FONT_UI,
-            fontSize: '7.5px',
+            fontSize: '8.5px',
             fontWeight: '600',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(4).setDepth(25);
 
-        // 3. Tombol Audio (kanan atas, sejajar dengan logo BPS)
-        this.audioBtn = this.add.container(292, topY).setDepth(25);
+        // 3. Tombol Audio (kanan atas, sejajar dengan Grup BPS)
+        this.audioBtn = this.add.container(288, topY).setDepth(25);
         
         const audioBg = this.add.graphics();
         audioBg.fillStyle(0xffffff, 1);
-        audioBg.fillRoundedRect(-14, -14, 28, 28, 7);
+        audioBg.fillRoundedRect(-15, -15, 30, 30, 8);
         audioBg.lineStyle(1, C.CELL_BORDER, 0.8);
-        audioBg.strokeRoundedRect(-14, -14, 28, 28, 7);
+        audioBg.strokeRoundedRect(-15, -15, 30, 30, 8);
         this.audioBtn.add(audioBg);
 
         this.audioIconGraphics = this.add.graphics();
         this.audioBtn.add(this.audioIconGraphics);
         this._drawAudioIcon();
 
-        const audioZone = this.add.zone(0, 0, 32, 32)
+        const audioZone = this.add.zone(0, 0, 34, 34)
             .setInteractive({ useHandCursor: true });
         this.audioBtn.add(audioZone);
 
@@ -164,17 +169,17 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 duration: 150, ease: 'Back.easeOut'
             });
 
-            this._floatText(isMuted ? 'SUARA: MATI' : 'SUARA: AKTIF', 292, 52);
+            this._floatText(isMuted ? 'SUARA: MATI' : 'SUARA: AKTIF', 288, 48);
         });
 
         // 4. Tombol Pause (paling kanan atas)
-        this.pauseBtn = this.add.container(332, topY).setDepth(25);
+        this.pauseBtn = this.add.container(330, topY).setDepth(25);
         
         const pauseBg = this.add.graphics();
         pauseBg.fillStyle(0xffffff, 1);
-        pauseBg.fillRoundedRect(-14, -14, 28, 28, 7);
+        pauseBg.fillRoundedRect(-15, -15, 30, 30, 8);
         pauseBg.lineStyle(1, C.CELL_BORDER, 0.8);
-        pauseBg.strokeRoundedRect(-14, -14, 28, 28, 7);
+        pauseBg.strokeRoundedRect(-15, -15, 30, 30, 8);
         this.pauseBtn.add(pauseBg);
 
         this.pauseIconGraphics = this.add.graphics();
@@ -183,7 +188,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.pauseIconGraphics.fillRect(1.5, -5, 2.5, 10);
         this.pauseBtn.add(this.pauseIconGraphics);
 
-        const pauseZone = this.add.zone(0, 0, 32, 32)
+        const pauseZone = this.add.zone(0, 0, 34, 34)
             .setInteractive({ useHandCursor: true });
         this.pauseBtn.add(pauseZone);
 
@@ -206,12 +211,12 @@ export class BlockPuzzleScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '18px',
             color: C.SCORE_VAL
-        }).setOrigin(0.5, 0.5).setResolution(4);
+        }).setOrigin(0.5, -0.4).setResolution(4);
 
         // 6. Mahkota / Crown Icon (tengah)
         this.crownIcon = this.add.image(180, scoreY, 'mahkota')
             .setScale(0.05)
-            .setOrigin(0.5, 0.5);
+            .setOrigin(0.5, 0.4);
 
         // 7. Skor Terbaik Value (kanan-tengah) — Teks angka saja, jernih & tajam
         const bestBoxX = 260;
@@ -219,7 +224,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '18px',
             color: C.BEST_VAL
-        }).setOrigin(0.5, 0.5).setResolution(4);
+        }).setOrigin(0.5, -0.4).setResolution(4);
     }
 
     _drawAudioIcon() {
@@ -500,9 +505,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
             g.fillStyle(0xfef08a, alpha);
             g.fillRect(cx - 1, cy - 1, 2, 2);
         } else if (specialType === 'bomb') {
-            // 💣 Classic Retro Arcade Bomb
-            // Dark gunmetal base tile
-            g.fillStyle(0x0f172a, alpha);
+            // 💣 Classic Retro Arcade Bomb — with active colored tile background!
+            const baseColor = color || 0xef4444;
+            g.fillStyle(baseColor, alpha);
             g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
 
             // Warning red inner border
@@ -584,12 +589,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _shakeCrown(intensity = 'small') {
         this.tweens.killTweensOf(this.crownIcon);
+        this.crownIcon.setScale(0.05);
         if (intensity === 'big') {
             // Line clear / match: goyang gembira tetap konsisten di ukuran 0.05
             this.tweens.add({
                 targets: this.crownIcon,
                 angle: { from: -10, to: 10 },
-                scaleX: 0.055, scaleY: 0.055,
+                scaleX: 0.05, scaleY: 0.05,
                 yoyo: true, repeat: 2, duration: 75,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
@@ -602,6 +608,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this.tweens.add({
                 targets: this.crownIcon,
                 angle: { from: -4, to: 4 },
+                scaleX: 0.05, scaleY: 0.05,
                 yoyo: true, repeat: 1, duration: 60,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
@@ -644,7 +651,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
             if (colorObj && colorObj.isSpecial === 'rainbow') {
                 this._drawPixelCell(g, bx, by, colorObj.color, 1, 'rainbow');
             } else if (colorObj && colorObj.isSpecial === 'bomb') {
-                this._drawPixelCell(g, bx, by, colorObj.color, 1, 'bomb');
+                const baseColor = colorObj.color || 0xef4444;
+                this._drawPixelCell(g, bx, by, baseColor, 1, 'bomb');
             } else if (colorObj && colorObj.useSprite) {
                 const img = this.add.image(bx, by, colorObj.useSprite)
                     .setOrigin(0, 0)
@@ -671,7 +679,12 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
         if (!colorObj || typeof colorObj !== 'object') return null;
         if (colorObj.isSpecial === 'rainbow') return COLOR_RAINBOW;
-        if (colorObj.isSpecial === 'bomb') return COLOR_BOMB;
+        if (colorObj.isSpecial === 'bomb') {
+            const base = ACTIVE_COLORS.find(activeColor =>
+                activeColor.id === colorObj.id || activeColor.color === colorObj.color
+            ) || ACTIVE_COLORS[0];
+            return { ...base, isSpecial: 'bomb' };
+        }
         return ACTIVE_COLORS.find(activeColor =>
             activeColor.id === colorObj.id ||
             activeColor.color === colorObj.color ||
@@ -1271,7 +1284,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
             
             const colorNum = this.board[r][c] || 0xcbd5e1;
 
-            // Deteksi jika sel yang dibersihkan atau tetangganya adalah bom aktif
+            // Deteksi jika sel yang dibersihkan atau tetangganya adalah bom
             const dirs = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]];
             for (const [dr, dc] of dirs) {
                 const nr = r + dr;
@@ -1297,9 +1310,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this._renderBoardFills();
         clearedCells.forEach(([x, y, colorNum]) => this._spawnClearParticle(x, y, colorNum));
 
-        // Jika ada bom siaga yang terpicu oleh match ini, ledakkan secara berantai
+        // Jika ada balok bom yang ikut terhapus atau tersenggol oleh match ini, ledakkan 3x3 berantai
         if (bombsTriggered.length > 0) {
-            this.time.delayedCall(160, () => {
+            this.time.delayedCall(140, () => {
                 this._detonateBombs(bombsTriggered);
             });
         }
@@ -1566,9 +1579,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
         // Special Block Roll (Rainbow Wildcard / Bomb)
         const specialSpawnChance = this.isFeverActive ? 0.32 : 0.12;
         if (Math.random() < specialSpawnChance) {
-            const specialBlock = Math.random() < 0.55 ? COLOR_RAINBOW : COLOR_BOMB;
             const specialIndex = Phaser.Math.Between(0, assignedColors.length - 1);
-            assignedColors[specialIndex] = specialBlock;
+            if (Math.random() < 0.55) {
+                assignedColors[specialIndex] = COLOR_RAINBOW;
+            } else {
+                const base = assignedColors[specialIndex];
+                assignedColors[specialIndex] = { ...base, isSpecial: 'bomb' };
+            }
         }
 
         return shapeCells.map(([cx, cy], idx) => [cx, cy, assignedColors[idx]]);
@@ -1846,13 +1863,17 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this.highScore = this.score;
             saveHighScore(this.highScore);
 
-            // Efek: mahkota berkedip saat rekor terlampaui (tetap kembali ke 0.05)
+            // Efek: mahkota berkedip saat rekor terlampaui (tetap di ukuran 0.05)
             this.tweens.add({
                 targets: this.crownIcon,
-                scaleX: 0.065, scaleY: 0.065,
-                yoyo: true, duration: 150,
-                ease: 'Back.easeOut',
-                onComplete: () => this.crownIcon.setScale(0.05)
+                angle: { from: -15, to: 15 },
+                scaleX: 0.05, scaleY: 0.05,
+                yoyo: true, duration: 120, repeat: 2,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    this.crownIcon.setAngle(0);
+                    this.crownIcon.setScale(0.05);
+                }
             });
         }
         this._syncScoreUI();

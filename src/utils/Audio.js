@@ -6,12 +6,25 @@
 export class RetroAudio {
     constructor() {
         this.ctx = null;
-        this.compressor = null;
         this.masterGain = null;
+        this.noiseBuffer = null;
         this.isMuted = typeof window !== 'undefined'
             ? localStorage.getItem('bps_1010_muted') === 'true'
             : false;
         this.lastClearTime = 0;
+
+        // Auto-unlock WebAudio on first user gesture for instant response without browser autoplay lag
+        if (typeof window !== 'undefined') {
+            const unlock = () => {
+                this.init();
+                window.removeEventListener('pointerdown', unlock);
+                window.removeEventListener('touchstart', unlock);
+                window.removeEventListener('keydown', unlock);
+            };
+            window.addEventListener('pointerdown', unlock, { passive: true, once: true });
+            window.addEventListener('touchstart', unlock, { passive: true, once: true });
+            window.addEventListener('keydown', unlock, { passive: true, once: true });
+        }
     }
 
     setMuted(muted) {
@@ -35,21 +48,20 @@ export class RetroAudio {
     init() {
         if (!this.ctx && (typeof window !== 'undefined') && (window.AudioContext || window.webkitAudioContext)) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioContext();
+            this.ctx = new AudioContext({ latencyHint: 'interactive' });
 
-            // Mastering Safety Limiter (Clean transparent limiter with fast release, prevents voice clipping)
-            this.compressor = this.ctx.createDynamicsCompressor();
-            this.compressor.threshold.setValueAtTime(-1, this.ctx.currentTime);
-            this.compressor.knee.setValueAtTime(6, this.ctx.currentTime);
-            this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
-            this.compressor.attack.setValueAtTime(0.001, this.ctx.currentTime);
-            this.compressor.release.setValueAtTime(0.04, this.ctx.currentTime);
-
+            // Direct Master Gain (NO compressor to avoid volume ducking, lag, or dropped voices)
             this.masterGain = this.ctx.createGain();
             this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
-
-            this.compressor.connect(this.masterGain);
             this.masterGain.connect(this.ctx.destination);
+
+            // Pre-generate static noise buffer for instantaneous bomb explosion with 0ms allocation lag
+            const bufferSize = Math.floor(this.ctx.sampleRate * 0.45);
+            this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = this.noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.2);
+            }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume().catch(() => {});
@@ -57,11 +69,11 @@ export class RetroAudio {
     }
 
     _getOut() {
-        return this.compressor || this.ctx?.destination;
+        return this.masterGain || this.ctx?.destination;
     }
 
     _getNow() {
-        return (this.ctx?.currentTime || 0) + 0.005; // 5ms lookahead prevents past-time drops on mobile
+        return (this.ctx?.currentTime || 0) + 0.002;
     }
 
     /**
@@ -183,8 +195,7 @@ export class RetroAudio {
      * Thunderous, cinematic 8-bit arcade bomb blast:
      * - Layer 1: Sub-Bass 808 pitch punch (240Hz -> 28Hz)
      * - Layer 2: Transient shockwave crack (520Hz -> 40Hz)
-     * - Layer 3: Heavy resonant lowpass white noise blast (2800Hz -> 35Hz)
-     * - Layer 4: Debris sizzle crackle
+     * - Layer 3: Heavy resonant lowpass white noise blast (cached buffer, 0ms latency)
      */
     playBombExplosion() {
         if (this.isMuted) return;
@@ -221,33 +232,28 @@ export class RetroAudio {
             sub.start(now);
             sub.stop(now + 0.45);
 
-            // 3. Resonant Crackling White Noise Explosion (2800Hz -> 35Hz sweep)
-            const bufferSize = Math.floor(this.ctx.sampleRate * 0.45);
-            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.2);
+            // 3. Resonant Crackling White Noise Explosion (uses pre-allocated cached buffer)
+            if (this.noiseBuffer) {
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.noiseBuffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.Q.setValueAtTime(3.0, now);
+                filter.frequency.setValueAtTime(2800, now);
+                filter.frequency.exponentialRampToValueAtTime(35, now + 0.45);
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.55, now);
+                noiseGain.gain.linearRampToValueAtTime(0.0001, now + 0.45);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(this._getOut());
+
+                noise.start(now);
+                noise.stop(now + 0.45);
             }
-
-            const noise = this.ctx.createBufferSource();
-            noise.buffer = buffer;
-
-            const filter = this.ctx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.Q.setValueAtTime(3.0, now);
-            filter.frequency.setValueAtTime(2800, now);
-            filter.frequency.exponentialRampToValueAtTime(35, now + 0.45);
-
-            const noiseGain = this.ctx.createGain();
-            noiseGain.gain.setValueAtTime(0.55, now);
-            noiseGain.gain.linearRampToValueAtTime(0.0001, now + 0.45);
-
-            noise.connect(filter);
-            filter.connect(noiseGain);
-            noiseGain.connect(this._getOut());
-
-            noise.start(now);
-            noise.stop(now + 0.45);
         } catch (e) { }
     }
 
