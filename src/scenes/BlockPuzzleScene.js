@@ -104,58 +104,145 @@ export class BlockPuzzleScene extends Phaser.Scene {
         g.fillRect(0, 0, 360, 640);
     }
 
-    // ── Header: Score — Crown — Best — Pause ────────────────
+    // ── Header: Audio Toggle — Score — Crown/Logo — Best — Pause ────────────────
 
     _buildHeader() {
-        const centerY = 65;
+        const centerY = 50;
 
-        // Score label
-        // this.add.text(95, centerY - 18, 'SCORE', {
-        //     fontFamily: FONT_PIXEL, fontSize: '6px',
-        //     color: '#94a3b8'
-        // }).setOrigin(0.5, 0.5).setResolution(4);
+        // 1. Tombol Audio (kiri)
+        this.audioBtn = this.add.container(32, centerY).setDepth(25);
+        
+        const audioBg = this.add.graphics();
+        audioBg.fillStyle(0xffffff, 1);
+        audioBg.fillRoundedRect(-15, -15, 30, 30, 8);
+        audioBg.lineStyle(1, C.CELL_BORDER, 0.8);
+        audioBg.strokeRoundedRect(-15, -15, 30, 30, 8);
+        this.audioBtn.add(audioBg);
 
-        // Skor (kiri)
-        this.scoreValueText = this.add.text(95, centerY + 6, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '20px',
+        this.audioIconGraphics = this.add.graphics();
+        this.audioBtn.add(this.audioIconGraphics);
+        this._drawAudioIcon();
+
+        const audioZone = this.add.zone(0, 0, 34, 34)
+            .setInteractive({ useHandCursor: true });
+        this.audioBtn.add(audioZone);
+
+        audioZone.on('pointerdown', () => {
+            const isMuted = this.audio.toggleMute();
+            this._drawAudioIcon();
+            triggerHaptic(15);
+            
+            // Pop button animation
+            this.tweens.killTweensOf(this.audioBtn);
+            this.audioBtn.setScale(0.85);
+            this.tweens.add({
+                targets: this.audioBtn,
+                scaleX: 1, scaleY: 1,
+                duration: 150, ease: 'Back.easeOut'
+            });
+
+            this._floatText(isMuted ? 'SUARA: MATI' : 'SUARA: AKTIF', 40, 75);
+        });
+
+        // 2. Score (kiri-tengah)
+        const scoreBoxX = 100;
+        this.add.text(scoreBoxX, centerY - 14, 'SKOR', {
+            fontFamily: FONT_PIXEL, fontSize: '5px',
+            color: '#94a3b8'
+        }).setOrigin(0.5, 0.5).setResolution(4);
+
+        this.scoreValueText = this.add.text(scoreBoxX, centerY + 5, '0', {
+            fontFamily: FONT_PIXEL, fontSize: '15px',
             color: C.SCORE_VAL
         }).setOrigin(0.5, 0.5).setResolution(4);
 
-        // Mahkota (tengah)
+        // 3. Mahkota / Logo Center
         this.crownIcon = this.add.image(180, centerY, 'mahkota')
-            .setScale(0.06)
+            .setScale(0.065)
             .setOrigin(0.5, 0.5);
 
-        // Best label
-        // this.add.text(275, centerY - 18, 'BEST', {
-        //     fontFamily: FONT_PIXEL, fontSize: '6px',
-        //     color: '#94a3b8'
-        // }).setOrigin(0.5, 0.5).setResolution(4);
+        // 4. Skor Terbaik (kanan-tengah)
+        const bestBoxX = 260;
+        this.add.text(bestBoxX, centerY - 14, 'TERBAIK', {
+            fontFamily: FONT_PIXEL, fontSize: '5px',
+            color: '#94a3b8'
+        }).setOrigin(0.5, 0.5).setResolution(4);
 
-        // Skor Terbaik (kanan)
-        this.highScoreValueText = this.add.text(275, centerY + 6, `${this.highScore}`, {
-            fontFamily: FONT_PIXEL, fontSize: '20px',
+        this.highScoreValueText = this.add.text(bestBoxX, centerY + 5, `${this.highScore}`, {
+            fontFamily: FONT_PIXEL, fontSize: '15px',
             color: C.BEST_VAL
         }).setOrigin(0.5, 0.5).setResolution(4);
 
-        // Pause button (pojok kanan atas)
-        this.pauseBtn = this.add.image(300, -12, 'pause')
-            .setScale(0.028)
-            .setOrigin(0, 0)
-            .setInteractive({ useHandCursor: true })
-            .setDepth(10);
+        // 5. Tombol Pause (kanan)
+        this.pauseBtn = this.add.container(328, centerY).setDepth(25);
+        
+        const pauseBg = this.add.graphics();
+        pauseBg.fillStyle(0xffffff, 1);
+        pauseBg.fillRoundedRect(-15, -15, 30, 30, 8);
+        pauseBg.lineStyle(1, C.CELL_BORDER, 0.8);
+        pauseBg.strokeRoundedRect(-15, -15, 30, 30, 8);
+        this.pauseBtn.add(pauseBg);
 
-        this.pauseBtn.on('pointerdown', () => {
-            if (!this.isGameOver && !this.isPaused) this._togglePause(true);
+        this.pauseIconGraphics = this.add.graphics();
+        this.pauseIconGraphics.fillStyle(0x1e293b, 1);
+        this.pauseIconGraphics.fillRect(-4.5, -6, 3, 12);
+        this.pauseIconGraphics.fillRect(1.5, -6, 3, 12);
+        this.pauseBtn.add(this.pauseIconGraphics);
+
+        const pauseZone = this.add.zone(0, 0, 34, 34)
+            .setInteractive({ useHandCursor: true });
+        this.pauseBtn.add(pauseZone);
+
+        pauseZone.on('pointerdown', () => {
+            if (!this.isGameOver && !this.isPaused) {
+                this.tweens.killTweensOf(this.pauseBtn);
+                this.pauseBtn.setScale(0.85);
+                this.tweens.add({
+                    targets: this.pauseBtn,
+                    scaleX: 1, scaleY: 1,
+                    duration: 150, ease: 'Back.easeOut'
+                });
+                this._togglePause(true);
+            }
         });
+    }
+
+    _drawAudioIcon() {
+        if (!this.audioIconGraphics) return;
+        this.audioIconGraphics.clear();
+        const isMuted = this.audio.getIsMuted();
+
+        const color = isMuted ? 0x94a3b8 : 0x1e293b;
+        this.audioIconGraphics.fillStyle(color, 1);
+
+        // Speaker Cone Body
+        this.audioIconGraphics.fillRect(-6, -3, 3, 6);
+        this.audioIconGraphics.fillTriangle(-3, -3, -3, 3, 2, 6);
+        this.audioIconGraphics.fillTriangle(-3, -3, 2, 6, 2, -6);
+
+        if (isMuted) {
+            // Mute Cross / Slash in bright red
+            this.audioIconGraphics.lineStyle(2, 0xef4444, 1);
+            this.audioIconGraphics.lineBetween(-7, 7, 7, -7);
+        } else {
+            // Sound Waves (arcs)
+            this.audioIconGraphics.lineStyle(1.5, 0x3b82f6, 1);
+            this.audioIconGraphics.beginPath();
+            this.audioIconGraphics.arc(1, 0, 4, -Math.PI / 3, Math.PI / 3, false);
+            this.audioIconGraphics.strokePath();
+
+            this.audioIconGraphics.beginPath();
+            this.audioIconGraphics.arc(1, 0, 7, -Math.PI / 3, Math.PI / 3, false);
+            this.audioIconGraphics.strokePath();
+        }
     }
 
     // ── Fever / Hyper Gauge UI ──────────────────────────────
 
     _buildFeverGauge() {
-        this.feverContainer = this.add.container(180, 97).setDepth(20);
+        this.feverContainer = this.add.container(180, 94).setDepth(20);
 
-        const trackW = 240, trackH = 8;
+        const trackW = 250, trackH = 8;
         const trackX = -trackW / 2, trackY = -trackH / 2;
 
         this.feverTrackGraphics = this.add.graphics();
@@ -183,7 +270,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _drawFeverBar() {
         this.feverBarGraphics.clear();
-        const trackW = 240, trackH = 8;
+        const trackW = 250, trackH = 8;
         const trackX = -trackW / 2, trackY = -trackH / 2;
         const pct = Math.max(0, Math.min(100, this.feverGauge)) / 100;
         const fillW = Math.max(0, (trackW - 2) * pct);
@@ -360,48 +447,90 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _drawPixelCell(g, x, y, color, alpha = 1, specialType = null) {
         if (specialType === 'rainbow') {
-            const half = CELL_SIZE / 2;
-            g.fillStyle(0xef4444, alpha);
-            g.fillRoundedRect(x, y, half, half, { tl: 5, tr: 0, bl: 0, br: 0 });
-            g.fillStyle(0x3b82f6, alpha);
-            g.fillRoundedRect(x + half, y, half, half, { tl: 0, tr: 5, bl: 0, br: 0 });
-            g.fillStyle(0x22c55e, alpha);
-            g.fillRoundedRect(x, y + half, half, half, { tl: 0, tr: 0, bl: 5, br: 0 });
-            g.fillStyle(0xeab308, alpha);
-            g.fillRoundedRect(x + half, y + half, half, half, { tl: 0, tr: 0, bl: 0, br: 5 });
-
-            g.lineStyle(2, 0xffffff, alpha * 0.95);
-            g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
-
-            const cx = x + half, cy = y + half;
-            const sz = 3;
-            g.fillStyle(0xffffff, alpha);
-            g.fillRect(cx - sz / 2, cy - sz / 2, sz, sz);
-            g.fillRect(cx - sz / 2, cy - sz * 1.5, sz, sz);
-            g.fillRect(cx - sz / 2, cy + sz * 0.5, sz, sz);
-            g.fillRect(cx - sz * 1.5, cy - sz / 2, sz, sz);
-            g.fillRect(cx + sz * 0.5, cy - sz / 2, sz, sz);
-        } else if (specialType === 'bomb') {
-            g.fillStyle(0x1e293b, alpha);
+            // 🌈 Rainbow Wildcard: Multi-color prismatic star badge
+            // Base rounded background tile (Deep indigo)
+            g.fillStyle(0x1e1b4b, alpha);
             g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
-            
-            g.lineStyle(1.5, 0x0f172a, alpha);
+
+            // Shimmering outer border
+            g.lineStyle(1.5, 0xfacc15, alpha);
             g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
 
+            // 4 Vivid Rainbow Quadrants / Prisms
             const half = CELL_SIZE / 2;
-            const cx = x + half, cy = y + half + 2;
-            g.fillStyle(0x0f172a, alpha);
-            g.fillCircle(cx, cy, 7);
-            g.fillStyle(0x475569, alpha);
-            g.fillCircle(cx - 2, cy - 2, 2.5);
-
-            // Fuse & spark
-            g.fillStyle(0x78350f, alpha);
-            g.fillRect(cx - 1.5, cy - 10, 3, 3);
+            const pad = 3;
+            const sz = half - pad;
+            // Top-left: Red
             g.fillStyle(0xef4444, alpha);
-            g.fillRect(cx + 1, cy - 12, 3, 3);
+            g.fillRect(x + pad, y + pad, sz, sz);
+            // Top-right: Yellow
             g.fillStyle(0xfacc15, alpha);
-            g.fillRect(cx + 2, cy - 11, 2, 2);
+            g.fillRect(x + half, y + pad, sz, sz);
+            // Bottom-left: Green
+            g.fillStyle(0x22c55e, alpha);
+            g.fillRect(x + pad, y + half, sz, sz);
+            // Bottom-right: Blue
+            g.fillStyle(0x3b82f6, alpha);
+            g.fillRect(x + half, y + half, sz, sz);
+
+            // Center: 8-Bit Sparkling White Star / Cross
+            const cx = x + half, cy = y + half;
+            g.fillStyle(0xffffff, alpha);
+            // Core
+            g.fillRect(cx - 2, cy - 2, 4, 4);
+            // Rays
+            g.fillRect(cx - 1, cy - 5, 2, 10);
+            g.fillRect(cx - 5, cy - 1, 10, 2);
+            // Star glint corners
+            g.fillStyle(0xfef08a, alpha);
+            g.fillRect(cx - 1, cy - 1, 2, 2);
+        } else if (specialType === 'bomb') {
+            // 💣 Classic Retro Arcade Bomb
+            // Dark gunmetal base tile
+            g.fillStyle(0x0f172a, alpha);
+            g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+
+            // Warning red inner border
+            g.lineStyle(1.5, 0xef4444, alpha * 0.9);
+            g.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
+
+            const cx = x + CELL_SIZE / 2;
+            const cy = y + CELL_SIZE / 2 + 2;
+
+            // Black Bomb Sphere
+            g.fillStyle(0x1e293b, alpha);
+            g.fillCircle(cx, cy, 7.5);
+            g.fillStyle(0x020617, alpha);
+            g.fillCircle(cx, cy, 6.5);
+
+            // Gloss highlight on bomb
+            g.fillStyle(0xffffff, alpha * 0.9);
+            g.fillRect(cx - 4, cy - 4, 2, 2);
+            g.fillRect(cx - 2, cy - 5, 2, 1);
+            g.fillRect(cx - 5, cy - 2, 1, 2);
+
+            // Metallic Cap Neck
+            g.fillStyle(0x64748b, alpha);
+            g.fillRect(cx - 2, cy - 9.5, 4, 2);
+
+            // Curved Wick/Fuse
+            g.fillStyle(0x78350f, alpha);
+            g.fillRect(cx + 1, cy - 11.5, 2, 2);
+            g.fillRect(cx + 3, cy - 12.5, 2, 2);
+
+            // Burning Spark Flame (Red, Orange, Yellow)
+            g.fillStyle(0xef4444, alpha);
+            g.fillRect(cx + 4, cy - 14, 4, 4);
+            g.fillStyle(0xf97316, alpha);
+            g.fillRect(cx + 4.5, cy - 13.5, 3, 3);
+            g.fillStyle(0xfde047, alpha);
+            g.fillRect(cx + 5, cy - 13, 2, 2);
+
+            // Fiery Spark Mark on Bomb Body
+            g.fillStyle(0xf59e0b, alpha * 0.9);
+            g.fillRect(cx - 1, cy - 1, 2, 2);
+            g.fillRect(cx, cy - 2, 1, 4);
+            g.fillRect(cx - 2, cy, 4, 1);
         } else {
             g.fillStyle(color, alpha);
             g.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
@@ -596,10 +725,20 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.lastGhostKey = null;
 
         this.audio.playPickup();
-        triggerHaptic(12);
+        triggerHaptic(14);
 
-        container.setDepth(60).setScale(1.0);
+        container.setDepth(60);
         this.tweens.killTweensOf(container);
+
+        // Smooth scale-up to full size (1.0) with responsive lift pop
+        this.tweens.add({
+            targets: container,
+            scaleX: 1.0,
+            scaleY: 1.0,
+            duration: 120,
+            ease: 'Back.easeOut'
+        });
+
         container.x = pointer.x;
         container.y = pointer.y + FINGER_OFFSET_Y;
         this._updateGhost(container);
@@ -697,19 +836,21 @@ export class BlockPuzzleScene extends Phaser.Scene {
             const y = GRID_START_Y + (targetRow + r) * GRID_STEP;
             
             if (colorObj && colorObj.isSpecial === 'rainbow') {
-                this.ghostGraphics.fillStyle(0xffffff, 0.45);
+                this.ghostGraphics.fillStyle(0xffffff, 0.55);
                 this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
-                this.ghostGraphics.lineStyle(2, 0xfacc15, 0.9);
+                this.ghostGraphics.lineStyle(2, 0xfacc15, 0.95);
                 this.ghostGraphics.strokeRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
             } else if (colorObj && colorObj.isSpecial === 'bomb') {
-                this.ghostGraphics.fillStyle(0xef4444, 0.4);
+                this.ghostGraphics.fillStyle(0xef4444, 0.5);
                 this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
-                this.ghostGraphics.lineStyle(2, 0x1e293b, 0.9);
+                this.ghostGraphics.lineStyle(2, 0x1e293b, 0.95);
                 this.ghostGraphics.strokeRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
             } else {
                 const fallbackColor = colorObj ? colorObj.color : 0xcbd5e1;
-                this.ghostGraphics.fillStyle(fallbackColor, 0.35);
+                this.ghostGraphics.fillStyle(fallbackColor, 0.45);
                 this.ghostGraphics.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
+                this.ghostGraphics.lineStyle(1.5, 0xffffff, 0.6);
+                this.ghostGraphics.strokeRoundedRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 5);
             }
         });
     }

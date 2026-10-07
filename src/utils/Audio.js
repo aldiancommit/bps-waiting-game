@@ -6,6 +6,27 @@
 export class RetroAudio {
     constructor() {
         this.ctx = null;
+        this.isMuted = typeof window !== 'undefined'
+            ? localStorage.getItem('bps_1010_muted') === 'true'
+            : false;
+    }
+
+    setMuted(muted) {
+        this.isMuted = !!muted;
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.setItem('bps_1010_muted', this.isMuted ? 'true' : 'false');
+            } catch (e) { }
+        }
+    }
+
+    toggleMute() {
+        this.setMuted(!this.isMuted);
+        return this.isMuted;
+    }
+
+    getIsMuted() {
+        return this.isMuted;
     }
 
     init() {
@@ -22,6 +43,7 @@ export class RetroAudio {
      * Crisp, snappy 8-bit pickup blip.
      */
     playPickup() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -48,6 +70,7 @@ export class RetroAudio {
      * Tactile, punchy block drop sound with mechanical thud.
      */
     playPlace() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -73,6 +96,7 @@ export class RetroAudio {
      * Joyful ascending arpeggio chime on line/cluster clear.
      */
     playLineClear(combo = 1) {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -104,6 +128,7 @@ export class RetroAudio {
      * Special energetic rising power-up fanfare for high combo streaks.
      */
     playCombo(streak = 2) {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -132,6 +157,7 @@ export class RetroAudio {
      * Explosive retro bomb blast with low frequency rumble and noise burst.
      */
     playBombExplosion() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -183,6 +209,7 @@ export class RetroAudio {
      * Shimmering rainbow wildcard match sparkle.
      */
     playRainbowMatch() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -211,6 +238,7 @@ export class RetroAudio {
      * High-energy 8-bit hyper fanfare charge when Fever Mode is triggered.
      */
     playFeverStart() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -239,6 +267,7 @@ export class RetroAudio {
      * Grand triumphant 8-bit victory arpeggio for stage score milestones.
      */
     playMilestone() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {
@@ -275,6 +304,7 @@ export class RetroAudio {
      * Classic 8-bit retro descent on Game Over.
      */
     playGameOver() {
+        if (this.isMuted) return;
         this.init();
         if (!this.ctx) return;
         try {

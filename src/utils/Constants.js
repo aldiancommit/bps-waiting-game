@@ -18,7 +18,7 @@ export const GRID_STEP = CELL_SIZE + CELL_GAP; // Total ukuran per sel
 
 // [TAG: PENGATURAN UKURAN DAN POSISI PAPAN]
 export const BOARD_X = 10;       // Posisi papan dari kiri (X)
-export const BOARD_Y = 118;      // Posisi papan dari atas (Y)
+export const BOARD_Y = 126;      // Posisi papan dari atas (Y) - diturunkan untuk memberi ruang header
 export const BOARD_W = 340;      // Lebar total papan
 export const BOARD_H = 340;      // Tinggi total papan
 
@@ -27,13 +27,14 @@ export const GRID_START_X = BOARD_X;
 export const GRID_START_Y = BOARD_Y;
 
 // [TAG: PENGATURAN UX SENTUHAN (TOUCH)]
-export const FINGER_OFFSET_Y = -55;
+// Balok dinaikkan lebih tinggi (-85px) saat di-hold agar tidak tertutup jempol dan mudah dilihat di layar HP
+export const FINGER_OFFSET_Y = -85;
 
 // [TAG: PENGATURAN 3 BALOK PILIHAN (SLOT BAWAH)]
 export const SLOT_CONFIG = [
-    { x: 67, y: 530, boxX: 20, boxY: 480, width: 94, height: 94 },
-    { x: 180, y: 530, boxX: 133, boxY: 480, width: 94, height: 94 },
-    { x: 293, y: 530, boxX: 246, boxY: 480, width: 94, height: 94 }
+    { x: 67, y: 540, boxX: 20, boxY: 492, width: 94, height: 94 },
+    { x: 180, y: 540, boxX: 133, boxY: 492, width: 94, height: 94 },
+    { x: 293, y: 540, boxX: 246, boxY: 492, width: 94, height: 94 }
 ];
 // [TAG: SKALA BALOK DI SLOT]
 export const SLOT_SCALE = 0.52;
