@@ -44,7 +44,7 @@ export const STORAGE_KEYS = {
 };
 
 // [TAG: FONT]
-export const FONT_PIXEL = "'Press Start 2P', monospace";
+export const FONT_PIXEL = "'Public Pixel', sans-serif";
 
 // [TAG: PENGATURAN TEMA WARNA UTAMA]
 export const C = {

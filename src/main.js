@@ -6,22 +6,27 @@ import { BlockPuzzleScene } from './scenes/BlockPuzzleScene.js';
  * Pixel Art Theme
  */
 
-const DPR = Math.min(window.devicePixelRatio || 1, 3);
+const GAME_WIDTH = 360;
+const GAME_HEIGHT = 640;
 
 const config = {
     type: Phaser.AUTO,
-    width: 360 * DPR,
-    height: 640 * DPR,
-    parent: document.body,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+    parent: 'game-root',
     backgroundColor: '#F1F5F9',
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: GAME_WIDTH,
+        height: GAME_HEIGHT,
+        expandParent: true
     },
     render: {
-        antialias: true,
-        pixelArt: false,
-        roundPixels: false,
+        antialias: false,
+        antialiasGL: false,
+        pixelArt: true,
+        roundPixels: true,
         powerPreference: 'high-performance'
     },
     input: {
@@ -30,18 +35,18 @@ const config = {
     scene: BlockPuzzleScene
 };
 
-// Expose DPR for scene to use
-window.__GAME_DPR = DPR;
+const startGame = () => {
+    new Phaser.Game(config);
+};
 
-if (document.fonts && document.fonts.ready) {
+if (document.fonts && document.fonts.load) {
     Promise.race([
-        document.fonts.ready,
-        new Promise(resolve => setTimeout(resolve, 1500)) // Timeout 1.5 detik
-    ]).then(() => {
-        new Phaser.Game(config);
-    });
+        Promise.all([
+            document.fonts.load('10px "Public Pixel"'),
+            document.fonts.ready
+        ]),
+        new Promise(resolve => setTimeout(resolve, 1500))
+    ]).then(startGame).catch(startGame);
 } else {
-    window.addEventListener('load', () => {
-        new Phaser.Game(config);
-    });
+    window.addEventListener('load', startGame);
 }

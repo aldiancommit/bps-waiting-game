@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLOCK_SHAPES, ACTIVE_COLORS } from '../data/BlockShapes.js';
+import { ACTIVE_COLORS, generateShapeCandidates } from '../data/BlockShapes.js';
 import {
     DPR,
     GRID_SIZE, CELL_SIZE, CELL_GAP, GRID_STEP,
@@ -13,7 +13,7 @@ import {
 import { RetroAudio, triggerHaptic } from '../utils/Audio.js';
 import {
     getHighScore, saveHighScore,
-    saveGameState, loadGameState, clearGameState
+    clearGameState
 } from '../utils/Storage.js';
 
 export class BlockPuzzleScene extends Phaser.Scene {
@@ -72,7 +72,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this._buildPauseOverlay();
         this._setupInput();
 
-        if (!this._restoreSession()) this.spawnSlotPieces();
+        clearGameState();
+        this.spawnSlotPieces();
         this._syncScoreUI();
     }
 
@@ -90,14 +91,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const centerY = 65;
 
         // Score label
-        this.add.text(95, centerY - 18, 'SCORE', {
-            fontFamily: FONT_PIXEL, fontSize: '6px',
-            color: '#94a3b8'
-        }).setOrigin(0.5, 0.5).setResolution(4);
+        // this.add.text(95, centerY - 18, 'SCORE', {
+        //     fontFamily: FONT_PIXEL, fontSize: '6px',
+        //     color: '#94a3b8'
+        // }).setOrigin(0.5, 0.5).setResolution(4);
 
         // Skor (kiri)
         this.scoreValueText = this.add.text(95, centerY + 6, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '14px',
+            fontFamily: FONT_PIXEL, fontSize: '20px',
             color: C.SCORE_VAL
         }).setOrigin(0.5, 0.5).setResolution(4);
 
@@ -107,14 +108,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
             .setOrigin(0.5, 0.5);
 
         // Best label
-        this.add.text(275, centerY - 18, 'BEST', {
-            fontFamily: FONT_PIXEL, fontSize: '6px',
-            color: '#94a3b8'
-        }).setOrigin(0.5, 0.5).setResolution(4);
+        // this.add.text(275, centerY - 18, 'BEST', {
+        //     fontFamily: FONT_PIXEL, fontSize: '6px',
+        //     color: '#94a3b8'
+        // }).setOrigin(0.5, 0.5).setResolution(4);
 
         // Skor Terbaik (kanan)
         this.highScoreValueText = this.add.text(275, centerY + 6, `${this.highScore}`, {
-            fontFamily: FONT_PIXEL, fontSize: '14px',
+            fontFamily: FONT_PIXEL, fontSize: '20px',
             color: C.BEST_VAL
         }).setOrigin(0.5, 0.5).setResolution(4);
 
@@ -338,6 +339,44 @@ export class BlockPuzzleScene extends Phaser.Scene {
         return container;
     }
 
+    _normalizeColor(colorObj) {
+        if (typeof colorObj === 'number') {
+            return ACTIVE_COLORS.find(activeColor => activeColor.color === colorObj) || null;
+        }
+        if (!colorObj || typeof colorObj !== 'object') return null;
+        return ACTIVE_COLORS.find(activeColor =>
+            activeColor.id === colorObj.id ||
+            activeColor.color === colorObj.color ||
+            activeColor.useSprite === colorObj.useSprite
+        ) || null;
+    }
+
+    _normalizeShape(shapeData) {
+        if (!shapeData || !Array.isArray(shapeData.cells) || shapeData.cells.length === 0) {
+            return null;
+        }
+
+        const cells = [];
+        const occupied = new Set();
+
+        for (const cell of shapeData.cells) {
+            if (!Array.isArray(cell) || cell.length < 2) return null;
+
+            const [c, r, colorObj] = cell;
+            if (!Number.isInteger(c) || !Number.isInteger(r) || c < 0 || r < 0) {
+                return null;
+            }
+
+            const key = `${c},${r}`;
+            if (occupied.has(key)) return null;
+            occupied.add(key);
+
+            cells.push([c, r, this._normalizeColor(colorObj) || this._getSmartColor()]);
+        }
+
+        return { cells };
+    }
+
     // ── Input ───────────────────────────────────────────────
 
     _setupInput() {
@@ -391,8 +430,10 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.lastGhostKey = null;
         this.ghostGraphics.setVisible(false);
 
+        const shapeData = this._normalizeShape(piece?.shapeData);
         const coord = this._gridCoordOf(piece);
-        if (coord && this._canPlace(piece.shapeData.cells, coord.col, coord.row)) {
+        if (shapeData && coord && this._canPlace(shapeData.cells, coord.col, coord.row)) {
+            piece.shapeData = shapeData;
             this._placePiece(slotIdx, piece, coord.col, coord.row);
         } else {
             this._returnToSlot(piece, slotIdx);
@@ -413,6 +454,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _returnToSlot(container, slotIndex) {
         const pos = SLOT_CONFIG[slotIndex];
+        if (!container || !pos) return;
         container.setDepth(20);
         this.tweens.add({
             targets: container,
@@ -425,6 +467,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Grid Helpers ────────────────────────────────────────
 
     _gridCoordOf(container) {
+        if (!container) return null;
         const tlX = container.x + container.pieceOffsetX;
         const tlY = container.y + container.pieceOffsetY;
         const col = Math.round((tlX - GRID_START_X) / GRID_STEP);
@@ -441,9 +484,16 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     _updateGhost(container) {
+        if (!Array.isArray(container?.shapeData?.cells)) {
+            this.lastGhostKey = null;
+            this.ghostGraphics.setVisible(false);
+            return;
+        }
+
         const coord = this._gridCoordOf(container);
         if (coord && this._canPlace(container.shapeData.cells, coord.col, coord.row)) {
-            const key = `${coord.col},${coord.row},${container.shapeData.color}`;
+            const colorsKey = container.shapeData.cells.map(cell => cell[2]?.id || cell[2]?.color || '').join('|');
+            const key = `${coord.col},${coord.row},${colorsKey}`;
             if (this.lastGhostKey !== key) {
                 this.lastGhostKey = key;
                 this._drawGhost(container.shapeData, coord.col, coord.row);
@@ -467,6 +517,10 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     _canPlace(cells, targetCol, targetRow) {
+        if (!Array.isArray(cells) || !Number.isInteger(targetCol) || !Number.isInteger(targetRow)) {
+            return false;
+        }
+
         for (const [c, r] of cells) {
             const col = targetCol + c;
             const row = targetRow + r;
@@ -479,7 +533,11 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Place & Score ───────────────────────────────────────
 
     _placePiece(slotIndex, container, targetCol, targetRow) {
-        const shapeData = container.shapeData;
+        const shapeData = this._normalizeShape(container?.shapeData);
+        if (!shapeData || !Number.isInteger(slotIndex) || !this._canPlace(shapeData.cells, targetCol, targetRow)) {
+            this._returnToSlot(container, slotIndex);
+            return;
+        }
 
         this.audio.playPlace();
         triggerHaptic(18);
@@ -491,6 +549,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
             // Track sprite info for sprite cells
             if (colorObj && colorObj.useSprite) {
                 this.boardSprite[targetRow + r][targetCol + c] = colorObj.useSprite;
+            } else {
+                this.boardSprite[targetRow + r][targetCol + c] = null;
             }
         });
 
@@ -503,13 +563,12 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.slotContainers[slotIndex] = null;
         this.slotPieces[slotIndex] = null;
 
-        const isMatch = this._checkMatch3();
+        const isMatch = this._resolveMatches();
 
         this._shakeCrown(isMatch ? 'big' : 'small');
 
-        if (this.slotPieces.every(p => p === null)) this.spawnSlotPieces();
+        if (this.slotPieces.every(piece => piece === null)) this.spawnSlotPieces();
 
-        this._persistState();
         this._checkGameOver();
     }
 
@@ -557,9 +616,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     // ── Line Clear ──────────────────────────────────────────
 
-    _checkMatch3() {
-        const toClear = new Set();
+    _findMatchCells() {
         const visited = new Set();
+        const matchedCells = new Set();
         
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
@@ -594,11 +653,32 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 }
                 
                 if (group.length >= 3) {
-                    group.forEach(k => toClear.add(k));
+                    group.forEach(k => matchedCells.add(k));
                 }
             }
         }
 
+        return matchedCells;
+    }
+
+    _resolveMatches() {
+        let matched = false;
+        let guard = GRID_SIZE * GRID_SIZE;
+
+        while (guard-- > 0) {
+            const toClear = this._findMatchCells();
+            if (toClear.size === 0) {
+                if (!matched) this.comboStreak = 0;
+                break;
+            }
+            this._clearMatchedCells(toClear);
+            matched = true;
+        }
+
+        return matched;
+    }
+
+    _clearMatchedCells(toClear) {
         if (toClear.size === 0) {
             this.comboStreak = 0;
             return false;
@@ -624,47 +704,24 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this._floatText(`+${lineScore}`, 180, toClear.size >= 5 ? 310 : 265);
 
         const flash = this.add.graphics().setDepth(15);
+        const clearedCells = [];
         toClear.forEach(key => {
             const [r, c] = key.split(',').map(Number);
             const x = GRID_START_X + c * GRID_STEP;
             const y = GRID_START_Y + r * GRID_STEP;
             
-            const colorId = this.boardSprite[r][c];
             const colorNum = this.board[r][c] || 0xcbd5e1;
-            
-            // Spawn a temporary sprite to shrink down beautifully
-            if (colorId) {
-                const img = this.add.image(x + CELL_SIZE/2, y + CELL_SIZE/2, colorId)
-                    .setOrigin(0.5)
-                    .setDisplaySize(CELL_SIZE, CELL_SIZE)
-                    .setDepth(16);
-                    
-                const maskImg = this.add.image(x + CELL_SIZE/2, y + CELL_SIZE/2, 'cell-mask')
-                    .setOrigin(0.5).setVisible(false);
-                img.setMask(new Phaser.Display.Masks.BitmapMask(this, maskImg));
-                
-                this.tweens.add({
-                    targets: [img, maskImg],
-                    scaleX: 0, scaleY: 0, alpha: 0,
-                    angle: Phaser.Math.Between(-45, 45),
-                    duration: 300,
-                    ease: 'Back.easeIn',
-                    onComplete: () => {
-                        img.destroy();
-                        maskImg.destroy();
-                    }
-                });
-            }
 
             flash.fillStyle(0xffffff, 0.7);
             flash.fillRoundedRect(x, y, CELL_SIZE, CELL_SIZE, 6);
 
-            this._spawnClearParticle(x, y, colorNum);
+            clearedCells.push([x, y, colorNum]);
             this.board[r][c] = null;
             this.boardSprite[r][c] = null;
         });
 
         this._renderBoardFills();
+        clearedCells.forEach(([x, y, colorNum]) => this._spawnClearParticle(x, y, colorNum));
 
         this.tweens.add({
             targets: flash, alpha: 0, duration: 150, ease: 'Linear',
@@ -718,37 +775,61 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     _getWeightedRandomShape() {
-        // Hitung sel kosong untuk Dynamic Difficulty yang lebih pintar
-        let empty = 0;
-        for(let r=0; r<GRID_SIZE; r++) {
-            for(let c=0; c<GRID_SIZE; c++) {
-                if (this.board[r][c] === null) empty++;
+        const candidates = generateShapeCandidates(Math.random, 5);
+        const scored = [];
+
+        for (const shape of candidates) {
+            const placements = [];
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    if (this._canPlace(shape.cells, col, row)) placements.push([col, row]);
+                }
             }
-        }
-        
-        const rand = Math.random();
-        let targetCategory;
-        
-        // Progression berbasis Skor (Bikin Playtime Lama):
-        // Di awal game (Skor < 1000), pemain dimanjakan dengan blok kecil & menengah (zig-zag, L kecil).
-        if (this.score < 1000 || empty < 30) {
-            // Mode Awal / Mode Kritis (0% Besar)
-            if (rand < 0.60) targetCategory = 'small';
-            else targetCategory = 'medium';
-        } else if (this.score >= 1000 && this.score < 3000) {
-            // Mode Menengah (Mulai ada tantangan tipis)
-            if (rand < 0.50) targetCategory = 'small';
-            else if (rand < 0.90) targetCategory = 'medium';
-            else targetCategory = 'large';
-        } else {
-            // Mode Sulit (Skor tinggi, papan luas)
-            if (rand < 0.35) targetCategory = 'small';
-            else if (rand < 0.75) targetCategory = 'medium';
-            else targetCategory = 'large';
+            if (!placements.length) continue;
+
+            // Favor shapes fitting scarce pockets, and placements adjacent to useful colors.
+            const placementScores = placements.map(([col, row]) => {
+                let colorPotential = 0;
+                for (const [x, y] of shape.cells) {
+                    const neighbors = [[0,1],[1,0],[0,-1],[-1,0]];
+                    for (const [dx, dy] of neighbors) {
+                        const nr = row + y + dy, nc = col + x + dx;
+                        if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) continue;
+                        const color = this.board[nr][nc];
+                        if (color === null) continue;
+                        let adjacent = 0;
+                        for (const [ax, ay] of neighbors) {
+                            const ar = nr + ay, ac = nc + ax;
+                            if (ar >= 0 && ar < GRID_SIZE && ac >= 0 && ac < GRID_SIZE && this.board[ar][ac] === color) adjacent++;
+                        }
+                        colorPotential += adjacent >= 2 ? 3 : 1;
+                    }
+                }
+                // Slight preference for constrained board states, without forcing the best move.
+                return colorPotential + (placements.length < 12 ? 2 : 0);
+            });
+            const bestPlacement = Math.max(...placementScores);
+            const lastKey = this.lastGeneratedShapeKey;
+            const repeatPenalty = shape.key === lastKey ? 0.12 : 1;
+            const sizeWeight = shape.cells.length <= 2 ? 0.95 : 1.2;
+            const rarity = this.shapeFrequency?.[shape.key] || 0;
+            const rarityWeight = 1 / (1 + rarity * 0.35);
+            const tacticalWeight = 1 + Math.min(bestPlacement, 12) * 0.055;
+            const pressureWeight = 1;
+            const categoryWeight = {
+                small: 1, medium: 1.15, large: 0.4, hollow: 0.45, complex: 0.65
+            }[shape.category] || (shape.source === 'unique' ? 0.55 : 0.7);
+            scored.push({ shape, weight: repeatPenalty * sizeWeight * rarityWeight * tacticalWeight * pressureWeight * categoryWeight });
         }
 
-        const pool = BLOCK_SHAPES.filter(s => s.category === targetCategory);
-        return Phaser.Utils.Array.GetRandom(pool);
+        if (!scored.length) return null;
+        const total = scored.reduce((sum, item) => sum + item.weight, 0);
+        let roll = Math.random() * total;
+        const picked = scored.find(item => (roll -= item.weight) <= 0)?.shape || scored[scored.length - 1].shape;
+        this.lastGeneratedShapeKey = picked.key;
+        this.shapeFrequency ||= Object.create(null);
+        this.shapeFrequency[picked.key] = (this.shapeFrequency[picked.key] || 0) + 1;
+        return picked;
     }
 
     _getSmartColor() {
@@ -773,26 +854,34 @@ export class BlockPuzzleScene extends Phaser.Scene {
         return Phaser.Utils.Array.GetRandom(ACTIVE_COLORS);
     }
 
+    _getPieceColor(colorCounts) {
+        // Maksimal dua sel per warna dalam satu piece supaya tidak langsung match saat ditaruh.
+        const available = ACTIVE_COLORS.filter(color => (colorCounts.get(color.id) || 0) < 2);
+        const boardColors = new Set(this.board.flat().filter(color => color !== null));
+        const matching = available.filter(color => boardColors.has(color.color));
+        const pool = matching.length && Math.random() < 0.5 ? matching : available;
+        const picked = Phaser.Utils.Array.GetRandom(pool);
+        colorCounts.set(picked.id, (colorCounts.get(picked.id) || 0) + 1);
+        return picked;
+    }
+
     spawnSlotPieces() {
         for (let i = 0; i < 3; i++) {
             if (this.slotPieces[i] !== null) continue;
             
             const baseShape = this._getWeightedRandomShape();
+            if (!baseShape) continue;
             
-            // Assign a smart color to EACH cell, ensuring they are UNIQUE within the shape
-            // (Mencegah bug blok langsung hancur sendiri karena warna kembar)
             const coloredCells = [];
+            const colorCounts = new Map();
             baseShape.cells.forEach(([c, r]) => {
-                let smartColor;
-                do {
-                    smartColor = this._getSmartColor();
-                } while (coloredCells.some(cell => cell[2].id === smartColor.id));
-                
-                coloredCells.push([c, r, smartColor]);
+                coloredCells.push([c, r, this._getPieceColor(colorCounts)]);
             });
             
             const shape = {
-                cells: coloredCells
+                cells: coloredCells,
+                key: baseShape.key,
+                category: baseShape.category
             };
             
             this.slotPieces[i] = shape;
@@ -813,6 +902,11 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Game Over ───────────────────────────────────────────
 
     _checkGameOver() {
+        if (this.slotPieces.every(piece => piece === null)) {
+            this._triggerGameOver();
+            return;
+        }
+
         for (let i = 0; i < 3; i++) {
             const shape = this.slotPieces[i];
             if (!shape) continue;
@@ -837,6 +931,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     _triggerGameOver() {
+        if (this.isGameOver) return;
         this.isGameOver = true;
         this.audio.playGameOver();
         triggerHaptic([60, 60, 100]);
@@ -849,7 +944,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this.cameras.main.shake(400, 0.012);
 
-        this.time.delayedCall(400, () => {
+        this.gameOverTimer?.remove(false);
+        this.gameOverTimer = this.time.delayedCall(400, () => {
+            if (!this.isGameOver) return;
             this.finalScoreText.setText(`${this.score}`);
             const isRecord = this.score >= this.highScore && this.score > 0;
             this.newRecordBadge.setVisible(isRecord);
@@ -921,7 +1018,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         // Rekor baru badge
         this.newRecordBadge = this.add.text(180, 332, 'REKOR BARU!', {
-            fontFamily: FONT_PIXEL, fontSize: '7px', color: '#f59e0b'
+            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#f59e0b'
         }).setOrigin(0.5).setVisible(false).setResolution(4);
         this.gameOverContainer.add(this.newRecordBadge);
 
@@ -1049,59 +1146,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.highScoreValueText.setText(`${this.highScore}`);
     }
 
-    _persistState() {
-        if (!this.isGameOver) {
-            saveGameState({
-                score: this.score,
-                board: this.board,
-                boardSprite: this.boardSprite,
-                slotPieces: this.slotPieces
-            });
-        }
-    }
-
-    _restoreSession() {
-        const state = loadGameState();
-        if (!state?.board) return false;
-
-        this.score = state.score || 0;
-        this.board = state.board;
-        // Restore sprite tracking data
-        if (state.boardSprite) {
-            this.boardSprite = state.boardSprite;
-        }
-        this._renderBoardFills();
-
-        if (state.slotPieces?.some(p => p !== null)) {
-            this.slotPieces = state.slotPieces;
-            for (let i = 0; i < 3; i++) {
-                const shape = this.slotPieces[i];
-                if (!shape) continue;
-                // [FIX] Ensure restored shapes match BLOCK_SHAPES reference for useSprite flag
-                const match = BLOCK_SHAPES.find(bs =>
-                    bs.cells.length === shape.cells.length &&
-                    bs.cells.every(([c, r], idx) => shape.cells[idx][0] === c && shape.cells[idx][1] === r)
-                );
-                if (match) {
-                    this.slotPieces[i] = match;
-                }
-                const conf = SLOT_CONFIG[i];
-                const container = this._createPieceContainer(this.slotPieces[i], SLOT_SCALE);
-                container.setPosition(conf.x, conf.y);
-                this.slotContainers[i] = container;
-            }
-        } else {
-            this.spawnSlotPieces();
-        }
-
-        this._checkGameOver();
-        return true;
-    }
-
     _resetGame() {
         this.isGameOver = false;
         this.isPaused = false;
         this.comboStreak = 0;
+        this.lastGeneratedShapeKey = null;
+        this.shapeFrequency = Object.create(null);
+        this.gameOverTimer?.remove(false);
+        this.gameOverTimer = null;
         this.gameOverContainer.setVisible(false);
         this.pauseContainer.setVisible(false);
         this.score = 0;
