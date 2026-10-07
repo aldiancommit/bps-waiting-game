@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ACTIVE_COLORS, POOL_1, POOL_2, POOL_3, POOL_4, shapeKey } from '../data/BlockShapes.js';
+import { ACTIVE_COLORS, POOL_1, POOL_2, POOL_3, POOL_4, POOL_5, shapeKey } from '../data/BlockShapes.js';
 import {
     DPR,
     GRID_SIZE, CELL_SIZE, CELL_GAP, GRID_STEP,
@@ -798,29 +798,61 @@ export class BlockPuzzleScene extends Phaser.Scene {
         return placements;
     }
 
-    _pickFittingShape(preferredPool, fallbackPools = []) {
-        const shuffledPreferred = Phaser.Utils.Array.Shuffle([...preferredPool]);
-        for (const cells of shuffledPreferred) {
+    _pickFittingShape(poolSpec) {
+        const totalWeight = poolSpec.reduce((sum, item) => sum + item.weight, 0);
+        let roll = Math.random() * totalWeight;
+        let chosenPool = poolSpec[0].pool;
+        for (const item of poolSpec) {
+            roll -= item.weight;
+            if (roll <= 0) {
+                chosenPool = item.pool;
+                break;
+            }
+        }
+
+        // 1. Try candidates from chosen pool
+        const shuffledChosen = Phaser.Utils.Array.Shuffle([...chosenPool]);
+        for (const cells of shuffledChosen) {
             if (this._getValidPlacements(cells).length > 0) {
                 return cells;
             }
         }
-        for (const pool of fallbackPools) {
-            const shuffledFallback = Phaser.Utils.Array.Shuffle([...pool]);
-            for (const cells of shuffledFallback) {
+
+        // 2. Fallback to any pool in spec that fits
+        for (const item of poolSpec) {
+            const shuffledPool = Phaser.Utils.Array.Shuffle([...item.pool]);
+            for (const cells of shuffledPool) {
                 if (this._getValidPlacements(cells).length > 0) {
                     return cells;
                 }
             }
         }
+
+        // 3. Universal fallbacks to guarantee fitting
+        for (const fallbackPool of [POOL_2, POOL_1]) {
+            const shuffledFb = Phaser.Utils.Array.Shuffle([...fallbackPool]);
+            for (const cells of shuffledFb) {
+                if (this._getValidPlacements(cells).length > 0) {
+                    return cells;
+                }
+            }
+        }
+
         return POOL_1[0];
     }
 
+    /**
+     * Colorize piece with STRICT RULE:
+     * No single color may appear more than 2 times in any piece (max 2 per color).
+     * Synergizes with neighboring board cells to reward strategic placement.
+     */
     _colorizePiece(shapeCells) {
         const placements = this._getValidPlacements(shapeCells);
 
-        // Gather adjacent colors from valid placement positions on board
-        const neighborColors = [];
+        // Gather adjacent cell colors from valid placement positions on board
+        const neighborColorCounts = new Map();
+        ACTIVE_COLORS.forEach(c => neighborColorCounts.set(c.id, 0));
+
         if (placements.length > 0) {
             const samplePlacements = Phaser.Utils.Array.Shuffle([...placements]).slice(0, 6);
             const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
@@ -835,7 +867,9 @@ export class BlockPuzzleScene extends Phaser.Scene {
                             const boardVal = this.board[ny][nx];
                             if (boardVal !== null) {
                                 const found = ACTIVE_COLORS.find(c => c.color === boardVal);
-                                if (found) neighborColors.push(found);
+                                if (found) {
+                                    neighborColorCounts.set(found.id, (neighborColorCounts.get(found.id) || 0) + 1);
+                                }
                             }
                         }
                     }
@@ -857,108 +891,121 @@ export class BlockPuzzleScene extends Phaser.Scene {
             }
         }
 
-        // Determine Primary Color with high synergy to adjacent cells
+        // Synergistic colors sorted by frequency
+        const sortedSynergy = ACTIVE_COLORS
+            .filter(c => (neighborColorCounts.get(c.id) || 0) > 0)
+            .sort((a, b) => neighborColorCounts.get(b.id) - neighborColorCounts.get(a.id));
+
+        // 1. Primary Color (synergizes with neighbor board cells)
         let primaryColor;
-        if (neighborColors.length > 0 && Math.random() < 0.70) {
-            primaryColor = Phaser.Utils.Array.GetRandom(neighborColors);
+        if (sortedSynergy.length > 0 && Math.random() < 0.70) {
+            primaryColor = sortedSynergy[0];
         } else if (boardUniqueColors.length > 0 && Math.random() < 0.50) {
             primaryColor = Phaser.Utils.Array.GetRandom(boardUniqueColors);
         } else {
             primaryColor = Phaser.Utils.Array.GetRandom(ACTIVE_COLORS);
         }
 
-        // Determine Secondary Color
-        const otherColors = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id);
-        const neighborOtherColors = neighborColors.filter(c => c.id !== primaryColor.id);
-        const secondaryColor = neighborOtherColors.length > 0 && Math.random() < 0.60
-            ? Phaser.Utils.Array.GetRandom(neighborOtherColors)
-            : Phaser.Utils.Array.GetRandom(otherColors);
+        // 2. Secondary Color
+        const otherSynergy = sortedSynergy.filter(c => c.id !== primaryColor.id);
+        const remainingColors = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id);
+        const secondaryColor = otherSynergy.length > 0 && Math.random() < 0.60
+            ? otherSynergy[0]
+            : Phaser.Utils.Array.GetRandom(remainingColors);
+
+        // 3. Tertiary Color
+        const remaining3rd = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id && c.id !== secondaryColor.id);
+        const tertiaryColor = Phaser.Utils.Array.GetRandom(remaining3rd);
+
+        // 4. Quaternary Color
+        const remaining4th = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id && c.id !== secondaryColor.id && c.id !== tertiaryColor.id);
+        const quaternaryColor = Phaser.Utils.Array.GetRandom(remaining4th);
 
         const numCells = shapeCells.length;
-        const coloredCells = [];
+        const assignedColors = [];
 
         if (numCells === 1) {
-            // 1-cell is 100% primary synergistic color
-            coloredCells.push([shapeCells[0][0], shapeCells[0][1], primaryColor]);
+            assignedColors.push(primaryColor);
         } else if (numCells === 2) {
-            // 75% monochromatic (triggers 3-match when placed next to 1 existing cell), 25% dual
-            if (Math.random() < 0.75) {
-                for (const [cx, cy] of shapeCells) {
-                    coloredCells.push([cx, cy, primaryColor]);
-                }
+            // 65% same color (A, A) - valid (<= 2), 35% distinct (A, B)
+            if (Math.random() < 0.65) {
+                assignedColors.push(primaryColor, primaryColor);
             } else {
-                coloredCells.push([shapeCells[0][0], shapeCells[0][1], primaryColor]);
-                coloredCells.push([shapeCells[1][0], shapeCells[1][1], secondaryColor]);
+                assignedColors.push(primaryColor, secondaryColor);
             }
         } else if (numCells === 3) {
-            // 45% monochromatic (instant 3-match!), 45% 2 primary + 1 secondary, 10% distinct
-            const roll = Math.random();
-            if (roll < 0.45) {
-                for (const [cx, cy] of shapeCells) {
-                    coloredCells.push([cx, cy, primaryColor]);
-                }
-            } else if (roll < 0.90) {
-                coloredCells.push([shapeCells[0][0], shapeCells[0][1], primaryColor]);
-                coloredCells.push([shapeCells[1][0], shapeCells[1][1], primaryColor]);
-                coloredCells.push([shapeCells[2][0], shapeCells[2][1], secondaryColor]);
+            // NEVER (A, A, A)! Max 2 of same color.
+            // 75% (A, A, B)
+            // 25% (A, B, C)
+            if (Math.random() < 0.75) {
+                assignedColors.push(primaryColor, primaryColor, secondaryColor);
             } else {
-                const thirdOptions = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id && c.id !== secondaryColor.id);
-                const tertiary = Phaser.Utils.Array.GetRandom(thirdOptions);
-                coloredCells.push([shapeCells[0][0], shapeCells[0][1], primaryColor]);
-                coloredCells.push([shapeCells[1][0], shapeCells[1][1], secondaryColor]);
-                coloredCells.push([shapeCells[2][0], shapeCells[2][1], tertiary]);
+                assignedColors.push(primaryColor, secondaryColor, tertiaryColor);
+            }
+        } else if (numCells === 4) {
+            // NEVER 3+ of same color! Max 2 of any color.
+            // 55% (A, A, B, B)
+            // 35% (A, A, B, C)
+            // 10% (A, B, C, D)
+            const roll = Math.random();
+            if (roll < 0.55) {
+                assignedColors.push(primaryColor, primaryColor, secondaryColor, secondaryColor);
+            } else if (roll < 0.90) {
+                assignedColors.push(primaryColor, primaryColor, secondaryColor, tertiaryColor);
+            } else {
+                assignedColors.push(primaryColor, secondaryColor, tertiaryColor, quaternaryColor);
             }
         } else {
-            // 4 cells (compact tetramino)
-            if (Math.random() < 0.50) {
-                shapeCells.forEach(([cx, cy], idx) => {
-                    coloredCells.push([cx, cy, idx < 2 ? primaryColor : secondaryColor]);
-                });
-            } else {
-                shapeCells.forEach(([cx, cy], idx) => {
-                    coloredCells.push([cx, cy, idx < 3 ? primaryColor : secondaryColor]);
-                });
+            // 5 cells: (A, A, B, B, C) - max 2 per color!
+            assignedColors.push(primaryColor, primaryColor, secondaryColor, secondaryColor, tertiaryColor);
+        }
+
+        // Strict Safety Guard: ensure no color appears more than 2 times
+        const colorCounts = new Map();
+        assignedColors.forEach(c => colorCounts.set(c.id, (colorCounts.get(c.id) || 0) + 1));
+        for (let i = 0; i < assignedColors.length; i++) {
+            const cId = assignedColors[i].id;
+            if (colorCounts.get(cId) > 2) {
+                const spare = ACTIVE_COLORS.find(c => (colorCounts.get(c.id) || 0) < 2);
+                if (spare) {
+                    colorCounts.set(cId, colorCounts.get(cId) - 1);
+                    colorCounts.set(spare.id, (colorCounts.get(spare.id) || 0) + 1);
+                    assignedColors[i] = spare;
+                }
             }
         }
 
-        return coloredCells;
+        return shapeCells.map(([cx, cy], idx) => [cx, cy, assignedColors[idx]]);
     }
 
     spawnSlotPieces() {
         const occupancy = this._getBoardOccupancy();
 
-        // Wave composition:
-        // Slot 0: Lifeline / Small (1 or 2 cells)
-        // Slot 1: Core (2 or 3 cells)
-        // Slot 2: Tactical (2, 3, or compact 4 cells)
-        let pool0, pool1, pool2;
-        if (occupancy > 0.60) {
-            // Danger mode: heavily favor small pieces so player can clear board
-            pool0 = Math.random() < 0.65 ? POOL_1 : POOL_2;
-            pool1 = Math.random() < 0.60 ? POOL_2 : POOL_3;
-            pool2 = Math.random() < 0.50 ? POOL_2 : POOL_3;
+        // Wave composition with rich shape variety and adaptive tension
+        let spec0, spec1, spec2;
+        if (occupancy > 0.65) {
+            // Danger state: guarantee small/medium fits to allow recovery
+            spec0 = [{ pool: POOL_1, weight: 0.50 }, { pool: POOL_2, weight: 0.50 }];
+            spec1 = [{ pool: POOL_2, weight: 0.50 }, { pool: POOL_3, weight: 0.50 }];
+            spec2 = [{ pool: POOL_3, weight: 0.60 }, { pool: POOL_2, weight: 0.40 }];
         } else if (occupancy > 0.35) {
-            // Mid game: balanced
-            pool0 = Math.random() < 0.40 ? POOL_1 : POOL_2;
-            pool1 = Math.random() < 0.40 ? POOL_2 : POOL_3;
-            pool2 = Math.random() < 0.60 ? POOL_3 : POOL_4;
+            // Mid game: rich variety, strategic puzzle challenge
+            spec0 = [{ pool: POOL_1, weight: 0.20 }, { pool: POOL_2, weight: 0.40 }, { pool: POOL_3, weight: 0.40 }];
+            spec1 = [{ pool: POOL_3, weight: 0.50 }, { pool: POOL_4, weight: 0.50 }];
+            spec2 = [{ pool: POOL_3, weight: 0.35 }, { pool: POOL_4, weight: 0.45 }, { pool: POOL_5, weight: 0.20 }];
         } else {
-            // Early game / Low occupancy
-            pool0 = Math.random() < 0.30 ? POOL_1 : POOL_2;
-            pool1 = Math.random() < 0.35 ? POOL_2 : POOL_3;
-            pool2 = Math.random() < 0.50 ? POOL_3 : POOL_4;
+            // Early game / low occupancy: interesting patterns to paint the board
+            spec0 = [{ pool: POOL_2, weight: 0.40 }, { pool: POOL_3, weight: 0.60 }];
+            spec1 = [{ pool: POOL_3, weight: 0.45 }, { pool: POOL_4, weight: 0.55 }];
+            spec2 = [{ pool: POOL_4, weight: 0.60 }, { pool: POOL_5, weight: 0.40 }];
         }
 
-        const slotPools = [
-            { preferred: pool0, fallbacks: [POOL_1, POOL_2] },
-            { preferred: pool1, fallbacks: [POOL_2, POOL_1] },
-            { preferred: pool2, fallbacks: [POOL_3, POOL_2, POOL_1] }
-        ];
+        const slotSpecs = [spec0, spec1, spec2];
 
         for (let i = 0; i < 3; i++) {
             if (this.slotPieces[i] !== null) continue;
 
-            const shapeCells = this._pickFittingShape(slotPools[i].preferred, slotPools[i].fallbacks);
+            const shapeCells = this._pickFittingShape(slotSpecs[i]);
             const coloredCells = this._colorizePiece(shapeCells);
 
             const shape = {

@@ -1,6 +1,6 @@
 /**
  * Block Shapes and Color Definitions for 1010 Block Puzzle.
- * Compact, board-friendly shapes optimized for high playtime and frequent color matches.
+ * Rich pool of unique shapes (1 to 5 cells) designed for engaging gameplay.
  */
 
 export const ACTIVE_COLORS = [
@@ -24,17 +24,18 @@ export const POOL_2 = [
     [[0, 0], [0, 1]]
 ];
 
-// 3-Cell (Trominoes: Lines & Corners)
+// 3-Cell (Trominoes: Lines, Corners, Steps)
 export const POOL_3 = [
     [[0, 0], [1, 0], [2, 0]],
     [[0, 0], [0, 1], [0, 2]],
     [[0, 0], [1, 0], [0, 1]],
     [[0, 0], [1, 0], [1, 1]],
     [[0, 0], [0, 1], [1, 1]],
-    [[1, 0], [0, 1], [1, 1]]
+    [[1, 0], [0, 1], [1, 1]],
+    [[0, 0], [1, 1]]
 ];
 
-// 4-Cell (Compact Tetraminoes: 2x2 Square, Small T, Small L, 4-Lines)
+// 4-Cell (Tetraminoes: Square, T, L, Z, S, 4-Line)
 export const POOL_4 = [
     // 2x2 Square
     [[0, 0], [1, 0], [0, 1], [1, 1]],
@@ -48,9 +49,28 @@ export const POOL_4 = [
     [[1, 0], [1, 1], [1, 2], [0, 2]],
     [[0, 0], [1, 0], [2, 0], [0, 1]],
     [[0, 0], [1, 0], [2, 0], [2, 1]],
+    // Z & S shapes
+    [[0, 0], [1, 0], [1, 1], [2, 1]],
+    [[1, 0], [2, 0], [0, 1], [1, 1]],
+    [[0, 0], [0, 1], [1, 1], [1, 2]],
+    [[1, 0], [0, 1], [1, 1], [0, 2]],
     // 4-Lines
     [[0, 0], [1, 0], [2, 0], [3, 0]],
     [[0, 0], [0, 1], [0, 2], [0, 3]]
+];
+
+// 5-Cell (Unique Compact Patterns: Cross, Big Corner, U-shape, Big T, Stair)
+export const POOL_5 = [
+    // Cross / Plus
+    [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]],
+    // Big Corner
+    [[0, 0], [1, 0], [2, 0], [0, 1], [0, 2]],
+    // U-Shape
+    [[0, 0], [2, 0], [0, 1], [1, 1], [2, 1]],
+    // Big T
+    [[0, 0], [1, 0], [2, 0], [1, 1], [1, 2]],
+    // Stair / Diagonal
+    [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2]]
 ];
 
 export function normalizeShape(cells) {
@@ -72,7 +92,7 @@ export function shapeKey(cells) {
 }
 
 export function generateShapeCandidates() {
-    const all = [...POOL_1, ...POOL_2, ...POOL_3, ...POOL_4];
+    const all = [...POOL_1, ...POOL_2, ...POOL_3, ...POOL_4, ...POOL_5];
     return all.map(cells => ({
         cells,
         key: shapeKey(cells),
