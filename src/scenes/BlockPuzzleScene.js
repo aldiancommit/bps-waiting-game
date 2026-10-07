@@ -2086,22 +2086,45 @@ export class BlockPuzzleScene extends Phaser.Scene {
     /**
      * Menggambar ikon 'restart/refresh' geometris presisi menggunakan Phaser Graphics.
      */
-    _drawRestartIcon(graphics, x, y, radius = 11, color = 0x1e293b, lineThickness = 3.2) {
-        // 1. Gambar Busur Lingkaran (Arc)
+    _drawRestartIcon(graphics, x, y, radius = 11.5, color = 0x1e293b, lineThickness = 3.2) {
+        // 1. Gambar Busur Lingkaran
         graphics.lineStyle(lineThickness, color, 1);
         graphics.beginPath();
-        graphics.arc(x, y, radius, -Math.PI * 0.2, Math.PI * 1.35, false);
+        
+        // Mulai dari jam 8 (kiri bawah) ke jam 4 (kanan bawah) searah jarum jam
+        const startAngle = Math.PI * 0.75;
+        const endAngle = Math.PI * 2.25; 
+        
+        graphics.arc(x, y, radius, startAngle, endAngle, false);
         graphics.strokePath();
 
-        // 2. Gambar Kepala Panah (Arrowhead) di ujung busur
-        const arrowEndX = x + Math.cos(Math.PI * 1.35) * radius;
-        const arrowEndY = y + Math.sin(Math.PI * 1.35) * radius;
+        // 2. Tentukan koordinat titik ujung busur di kanan bawah
+        const arrowX = x + Math.cos(endAngle) * radius;
+        const arrowY = y + Math.sin(endAngle) * radius;
+
+        // 3. Gambar Kepala Panah dengan kalkulasi sudut rotasi otomatis (Tangent)
+        const arrowAngle = endAngle + Math.PI / 2; 
+        const arrowSize = 6; // Besaran kepala panah
 
         graphics.fillStyle(color, 1);
         graphics.beginPath();
-        graphics.moveTo(arrowEndX - 2, arrowEndY - 6);
-        graphics.lineTo(arrowEndX + 6, arrowEndY + 2);
-        graphics.lineTo(arrowEndX - 6, arrowEndY + 4);
+        
+        // Ujung depan panah
+        graphics.moveTo(
+            arrowX + Math.cos(arrowAngle) * arrowSize,
+            arrowY + Math.sin(arrowAngle) * arrowSize
+        );
+        // Sisi kiri belakang panah
+        graphics.lineTo(
+            arrowX + Math.cos(arrowAngle - 2.5) * arrowSize,
+            arrowY + Math.sin(arrowAngle - 2.5) * arrowSize
+        );
+        // Sisi kanan belakang panah
+        graphics.lineTo(
+            arrowX + Math.cos(arrowAngle + 2.5) * arrowSize,
+            arrowY + Math.sin(arrowAngle + 2.5) * arrowSize
+        );
+        
         graphics.closePath();
         graphics.fillPath();
     }
