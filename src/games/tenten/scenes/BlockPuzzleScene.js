@@ -110,6 +110,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this._buildGameOverOverlay();
         this._buildPauseOverlay();
         this._setupInput();
+        this._setupAutoPause();
 
         clearGameState();
         this.spawnSlotPieces();
@@ -139,14 +140,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
         // 2. Teks Grup BPS (di samping logo BPS, font Inter resolusi tinggi)
         this.bpsTitle = this.add.text(58, topY - 7, 'BPS', {
             fontFamily: FONT_UI,
-            fontSize: '16px',
+            fontSize: '18px',
             fontStyle: '750',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
         this.bpsSubtitle = this.add.text(58, topY + 7, 'Badan Pusat Statistik', {
             fontFamily: FONT_UI,
-            fontSize: '9.5px',
+            fontSize: '11px',
             fontStyle: '300',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
@@ -223,7 +224,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const scoreBoxX = 100;
         this.scoreValueText = this.add.text(scoreBoxX, scoreY, '0', {
             fontFamily: FONT_PIXEL,
-            fontSize: '18px',
+            fontSize: '20px',
             color: C.SCORE_VAL
         }).setOrigin(0.5, -0.4).setResolution(4);
 
@@ -236,7 +237,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         const bestBoxX = 260;
         this.highScoreValueText = this.add.text(bestBoxX, scoreY, `${this.highScore}`, {
             fontFamily: FONT_PIXEL,
-            fontSize: '18px',
+            fontSize: '20px',
             color: C.BEST_VAL
         }).setOrigin(0.5, -0.4).setResolution(4);
     }
@@ -291,7 +292,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this.feverLabel = this.add.text(0, -15, 'FEVER GAUGE', {
             fontFamily: FONT_PIXEL,
-            fontSize: '8px',
+            fontSize: '9.5px',
             color: '#94a3b8'
         }).setOrigin(0.5, 0.5).setResolution(4);
         this.feverContainer.add(this.feverLabel);
@@ -1896,33 +1897,33 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.gameOverContainer.add(dim);
 
         // Clean Pixel-Style Card Container
-        const cardW = 270, cardH = 264;
-        const cardX = 180 - cardW / 2, cardY = 175;
+        const cardW = 270, cardH = 312;
+        const cardX = 180 - cardW / 2, cardY = 152;
         const card = this.add.graphics();
         this._drawCard(card, cardX, cardY, cardW, cardH);
         this.gameOverContainer.add(card);
 
         // Title: GAME OVER (Pixel Font)
         const title = this.add.text(180, cardY + 28, 'GAME OVER', {
-            fontFamily: FONT_PIXEL, fontSize: '13px', color: '#ef4444'
+            fontFamily: FONT_PIXEL, fontSize: '15px', color: '#ef4444'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(title);
 
         // Score Label (Pixel Font)
         const scoreLabel = this.add.text(180, cardY + 64, 'SKOR AKHIR', {
-            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#64748b'
+            fontFamily: FONT_PIXEL, fontSize: '9.5px', color: '#64748b'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(scoreLabel);
 
         // Final Score Value (Pixel Font matching in-game score typography)
         this.finalScoreText = this.add.text(180, cardY + 98, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '22px', color: '#1e293b'
+            fontFamily: FONT_PIXEL, fontSize: '24px', color: '#1e293b'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(this.finalScoreText);
 
         // Best Score Subtext (Pixel Font)
         this.gameOverHighScoreText = this.add.text(180, cardY + 134, 'REKOR: 0', {
-            fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#b45309'
+            fontFamily: FONT_PIXEL, fontSize: '10px', color: '#b45309'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(this.gameOverHighScoreText);
 
@@ -1936,20 +1937,20 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.newRecordContainer.add(badgeBg);
 
         this.newRecordBadge = this.add.text(0, 0, '✨ REKOR BARU! 🎉', {
-            fontFamily: FONT_PIXEL, fontSize: '7px', color: '#b45309'
+            fontFamily: FONT_PIXEL, fontSize: '8px', color: '#b45309'
         }).setOrigin(0.5).setResolution(4);
         this.newRecordContainer.add(this.newRecordBadge);
         this.gameOverContainer.add(this.newRecordContainer);
 
         // Tombol Main Lagi
-        const btnW = 200, btnH = 42;
-        const btnX = 180 - btnW / 2, btnY = cardY + 204;
+        const btnW = 200, btnH = 38;
+        const btnX = 180 - btnW / 2, btnY = cardY + 196;
         const btn = this.add.graphics();
         this._drawButton(btn, btnX, btnY, btnW, btnH, C.BTN_BG);
         this.gameOverContainer.add(btn);
 
         const btnTxt = this.add.text(180, btnY + btnH / 2, '> MAIN LAGI <', {
-            fontFamily: FONT_PIXEL, fontSize: '9px', color: '#ffffff'
+            fontFamily: FONT_PIXEL, fontSize: '10.5px', color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(btnTxt);
 
@@ -1960,9 +1961,43 @@ export class BlockPuzzleScene extends Phaser.Scene {
             triggerHaptic(20);
             this._resetGame();
         });
+
+        // Tombol Menu Utama
+        const menuBtnY = btnY + btnH + 10;
+        const menuBtn = this.add.graphics();
+        this._drawButton(menuBtn, btnX, menuBtnY, btnW, btnH, C.BTN_BG);
+        this.gameOverContainer.add(menuBtn);
+
+        const menuBtnTxt = this.add.text(180, menuBtnY + btnH / 2, 'MENU UTAMA', {
+            fontFamily: FONT_PIXEL, fontSize: '10.5px', color: '#ffffff'
+        }).setOrigin(0.5).setResolution(4);
+        this.gameOverContainer.add(menuBtnTxt);
+
+        const menuHitZone = this.add.zone(180, menuBtnY + btnH / 2, btnW, btnH)
+            .setInteractive({ useHandCursor: true });
+        this.gameOverContainer.add(menuHitZone);
+        menuHitZone.on('pointerdown', () => {
+            triggerHaptic(15);
+            this.cameras.main.fadeOut(180, 241, 245, 249);
+            this.time.delayedCall(180, () => {
+                this.scene.start('HubScene');
+            });
+        });
     }
 
-    // ── Minimalist 3-Card Pause Menu (NATURAL & CLEAN UI) ─────
+    _setupAutoPause() {
+        this._onVisibilityChange = () => {
+            if (document.hidden && this.scene.isActive() && !this.isGameOver && !this.isPaused) {
+                this._togglePause(true);
+            }
+        };
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
+        this.events.once('shutdown', () => {
+            document.removeEventListener('visibilitychange', this._onVisibilityChange);
+        });
+    }
+
+    // ── Minimalist 4-Card Pause Menu 2x2 (NATURAL & CLEAN UI) ─────
 
     _buildPauseOverlay() {
         this.pauseContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
@@ -1973,50 +2008,39 @@ export class BlockPuzzleScene extends Phaser.Scene {
         dim.fillRect(0, 0, 360, 640);
         this.pauseContainer.add(dim);
 
-        // Modal Card Container
-        const modalW = 284, modalH = 186;
-        const modalX = 180 - modalW / 2, modalY = 216;
+        // Clean Modal Card Centered Perfectly (No text)
+        const modalW = 200, modalH = 200;
+        const modalX = 180 - modalW / 2, modalY = 320 - modalH / 2;
         const modalBg = this.add.graphics();
         this._drawCard(modalBg, modalX, modalY, modalW, modalH);
         this.pauseContainer.add(modalBg);
 
-        // Header Title & Subtitle (Pixel Font)
-        const pauseTitle = this.add.text(180, modalY + 24, 'JEDA', {
-            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#0f172a'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(pauseTitle);
+        // 4 Action Cards in 2x2 Grid Centered:
+        // Baris 1: Resume (▶), Restart (↺)
+        // Baris 2: Audio Toggle (🔊/🔇), Keluar Menu Utama (🚪/⬅)
+        const cardSize = 64;
+        const col1X = 180 - 39;
+        const col2X = 180 + 39;
+        const row1Y = 320 - 39;
+        const row2Y = 320 + 39;
 
-        const pauseSub = this.add.text(180, modalY + 42, 'SENTUH UNTUK LANJUT', {
-            fontFamily: FONT_PIXEL, fontSize: '6.5px', color: '#64748b'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(pauseSub);
-
-        // 3 Horizontal Cards (Resume, Restart, Sound Toggle)
-        // Clean white card background, rounded corners, solid dark slate geometric vector icons, NO text
-        const cardSize = 68;
-        const cardSpacing = 14;
-        const cardY = modalY + 98;
-
-        // Card 1: Resume (▶)
-        const c1X = 180 - cardSize - cardSpacing;
-        this.resumeCard = this._buildActionCard(c1X, cardY, cardSize, 'resume', () => {
+        // 1. Resume Card (▶)
+        this.resumeCard = this._buildActionCard(col1X, row1Y, cardSize, 'resume', () => {
             triggerHaptic(15);
             this._togglePause(false);
         });
         this.pauseContainer.add(this.resumeCard);
 
-        // Card 2: Restart (↺)
-        const c2X = 180;
-        this.restartCard = this._buildActionCard(c2X, cardY, cardSize, 'restart', () => {
+        // 2. Restart Card (↺)
+        this.restartCard = this._buildActionCard(col2X, row1Y, cardSize, 'restart', () => {
             triggerHaptic(20);
             this._togglePause(false);
             this._resetGame();
         });
         this.pauseContainer.add(this.restartCard);
 
-        // Card 3: Audio Toggle (🔊 / 🔇)
-        const c3X = 180 + cardSize + cardSpacing;
-        this.soundCard = this._buildActionCard(c3X, cardY, cardSize, 'audio', () => {
+        // 3. Audio Toggle Card (🔊 / 🔇)
+        this.soundCard = this._buildActionCard(col1X, row2Y, cardSize, 'audio', () => {
             this.audio.toggleMute();
             this._drawAudioIcon();
             this._drawCardAudioIcon();
@@ -2024,21 +2048,15 @@ export class BlockPuzzleScene extends Phaser.Scene {
         });
         this.pauseContainer.add(this.soundCard);
 
-        // Exit to Hub Button
-        const exitTxt = this.add.text(180, modalY + 158, '< KELUAR KE MENU UTAMA >', {
-            fontFamily: FONT_PIXEL, fontSize: '6.5px', color: '#ef4444'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(exitTxt);
-
-        const exitHit = this.add.zone(180, modalY + 158, 200, 24).setInteractive({ useHandCursor: true });
-        this.pauseContainer.add(exitHit);
-        exitHit.on('pointerdown', () => {
+        // 4. Keluar ke Menu Utama (🚪/⬅)
+        this.exitCard = this._buildActionCard(col2X, row2Y, cardSize, 'exit', () => {
             triggerHaptic(15);
             this.cameras.main.fadeOut(180, 241, 245, 249);
             this.time.delayedCall(180, () => {
                 this.scene.start('HubScene');
             });
         });
+        this.pauseContainer.add(this.exitCard);
     }
 
     _buildActionCard(x, y, size, type, onAction) {
@@ -2058,16 +2076,34 @@ export class BlockPuzzleScene extends Phaser.Scene {
         if (type === 'resume') {
             // Pure geometric Play Triangle
             iconG.fillStyle(0x1e293b, 1);
-            iconG.fillTriangle(-5, -10, -5, 10, 8, 0);
+            iconG.fillTriangle(-8, -14, -8, 14, 12, 0);
         } else if (type === 'restart') {
             // Ikon Restart dari aset resmi restart-icon.webp
-            const restartImg = this.add.image(0, 0, 'restart-icon')
-                .setDisplaySize(28, 28)
-                .setOrigin(0.5);
-            container.add(restartImg);
+            if (this.textures.exists('restart-icon')) {
+                const restartImg = this.add.image(0, 0, 'restart-icon')
+                    .setDisplaySize(34, 34)
+                    .setOrigin(0.5);
+                container.add(restartImg);
+            } else {
+                iconG.fillStyle(0x1e293b, 1);
+                iconG.fillCircle(0, 0, 10);
+            }
         } else if (type === 'audio') {
             this.pauseAudioIconGraphics = iconG;
             this._drawCardAudioIcon();
+        } else if (type === 'exit') {
+            // Icon Keluar ke Hub / Menu Utama (Frame Pintu + Panah Keluar)
+            iconG.lineStyle(2.5, 0xef4444, 1);
+            iconG.beginPath();
+            iconG.moveTo(1, -12);
+            iconG.lineTo(11, -12);
+            iconG.lineTo(11, 12);
+            iconG.lineTo(1, 12);
+            iconG.strokePath();
+
+            iconG.lineBetween(4, 0, -11, 0);
+            iconG.fillStyle(0xef4444, 1);
+            iconG.fillTriangle(-12, 0, -5, -6, -5, 6);
         }
 
         // Thumb-friendly wide touch zone
@@ -2099,23 +2135,23 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.pauseAudioIconGraphics.fillStyle(color, 1);
 
         // Speaker Cone Body
-        this.pauseAudioIconGraphics.fillRect(-10, -4, 4, 8);
-        this.pauseAudioIconGraphics.fillTriangle(-6, -4, -6, 4, 1, 9);
-        this.pauseAudioIconGraphics.fillTriangle(-6, -4, 1, 9, 1, -9);
+        this.pauseAudioIconGraphics.fillRect(-12, -5, 5, 10);
+        this.pauseAudioIconGraphics.fillTriangle(-7, -5, -7, 5, 3, 12);
+        this.pauseAudioIconGraphics.fillTriangle(-7, -5, 3, 12, 3, -12);
 
         if (isMuted) {
             // Mute Cross / Slash in bright red
             this.pauseAudioIconGraphics.lineStyle(2.5, 0xef4444, 1);
-            this.pauseAudioIconGraphics.lineBetween(-12, 10, 12, -10);
+            this.pauseAudioIconGraphics.lineBetween(-13, 12, 13, -12);
         } else {
             // Sound Waves (arcs)
-            this.pauseAudioIconGraphics.lineStyle(2, 0x1e293b, 1);
+            this.pauseAudioIconGraphics.lineStyle(2.5, 0x1e293b, 1);
             this.pauseAudioIconGraphics.beginPath();
-            this.pauseAudioIconGraphics.arc(0, 0, 7, -Math.PI / 3, Math.PI / 3, false);
+            this.pauseAudioIconGraphics.arc(2, 0, 8, -Math.PI / 3, Math.PI / 3, false);
             this.pauseAudioIconGraphics.strokePath();
 
             this.pauseAudioIconGraphics.beginPath();
-            this.pauseAudioIconGraphics.arc(0, 0, 12, -Math.PI / 3, Math.PI / 3, false);
+            this.pauseAudioIconGraphics.arc(2, 0, 15, -Math.PI / 3, Math.PI / 3, false);
             this.pauseAudioIconGraphics.strokePath();
         }
     }

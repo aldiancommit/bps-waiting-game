@@ -11,9 +11,12 @@ export class RetroAudio {
         this.ctx = null;
         this.masterGain = null;
         this.noiseBuffer = null;
-        this.isMuted = typeof window !== 'undefined'
-            ? (localStorage.getItem(TENTEN_STORAGE_KEYS.MUTED) === 'true' || localStorage.getItem('bps_1010_muted') === 'true')
-            : false;
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(TENTEN_STORAGE_KEYS.MUTED) ?? localStorage.getItem('bps_1010_muted');
+            this.isMuted = saved !== null ? (saved === 'true') : true;
+        } else {
+            this.isMuted = true;
+        }
         this.lastClearTime = 0;
 
         // Auto-unlock WebAudio on first user gesture for instant response without browser autoplay lag

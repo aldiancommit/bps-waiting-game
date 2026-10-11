@@ -71,6 +71,7 @@ export class MemoryScene extends Phaser.Scene {
         this._buildResultModal();
         this._buildGameOverModal();
         this._buildPauseModal();
+        this._setupAutoPause();
 
         // Start Level
         this._startLevel(this.level);
@@ -101,14 +102,14 @@ export class MemoryScene extends Phaser.Scene {
         // 2. BPS Title & Subtitle
         this.add.text(58, topY - 7, 'BPS', {
             fontFamily: FONT_UI,
-            fontSize: '16px',
+            fontSize: '17px',
             fontStyle: '750',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
 
         this.add.text(58, topY + 7, 'Badan Pusat Statistik', {
             fontFamily: FONT_UI,
-            fontSize: '9.5px',
+            fontSize: '10.5px',
             fontStyle: '300',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(25);
@@ -201,7 +202,7 @@ export class MemoryScene extends Phaser.Scene {
 
         this.levelText = this.add.text(0, 0, 'LV 1', {
             fontFamily: FONT_PIXEL,
-            fontSize: '9px',
+            fontSize: '10px',
             color: C.SCORE_VAL
         }).setOrigin(0.5).setResolution(4);
         this.levelPill.add(this.levelText);
@@ -213,7 +214,7 @@ export class MemoryScene extends Phaser.Scene {
 
         this.ruleText = this.add.text(0, 0, 'URUT: NAIK ↗', {
             fontFamily: FONT_PIXEL,
-            fontSize: '7.5px',
+            fontSize: '8.5px',
             color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.ruleBadge.add(this.ruleText);
@@ -228,7 +229,7 @@ export class MemoryScene extends Phaser.Scene {
         this.livesContainer.add(livesBg);
 
         this.heartsText = this.add.text(0, 0, '❤️❤️❤️', {
-            fontSize: '11px'
+            fontSize: '12px'
         }).setOrigin(0.5);
         this.livesContainer.add(this.heartsText);
 
@@ -245,21 +246,21 @@ export class MemoryScene extends Phaser.Scene {
 
         this.scoreLabel = this.add.text(-145, 0, 'SKOR', {
             fontFamily: FONT_PIXEL,
-            fontSize: '7px',
+            fontSize: '8px',
             color: '#64748b'
         }).setOrigin(0, 0.5).setResolution(4);
         this.scoreContainer.add(this.scoreLabel);
 
         this.scoreValText = this.add.text(-95, 0, '0', {
             fontFamily: FONT_PIXEL,
-            fontSize: '11px',
+            fontSize: '12.5px',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(4);
         this.scoreContainer.add(this.scoreValText);
 
         this.comboValText = this.add.text(145, 0, 'COMBO x1', {
             fontFamily: FONT_PIXEL,
-            fontSize: '7.5px',
+            fontSize: '8.5px',
             color: '#b45309'
         }).setOrigin(1, 0.5).setResolution(4);
         this.scoreContainer.add(this.comboValText);
@@ -286,7 +287,7 @@ export class MemoryScene extends Phaser.Scene {
     // ── Countdown Bar ───────────────────────────────────────
 
     _buildCountdownBar() {
-        this.countdownContainer = this.add.container(180, 118).setDepth(20);
+        this.countdownContainer = this.add.container(180, 130).setDepth(20);
 
         const trackW = 324, trackH = 8;
         const trackX = -trackW / 2, trackY = -trackH / 2;
@@ -303,7 +304,7 @@ export class MemoryScene extends Phaser.Scene {
 
         this.phaseLabel = this.add.text(0, -14, 'HAFALKAN POSISI ANGKA', {
             fontFamily: FONT_PIXEL,
-            fontSize: '6.5px',
+            fontSize: '8px',
             color: '#64748b'
         }).setOrigin(0.5).setResolution(4);
         this.countdownContainer.add(this.phaseLabel);
@@ -336,9 +337,9 @@ export class MemoryScene extends Phaser.Scene {
         readyBg.fillRoundedRect(-90, -22, 180, 22, { tl: 10, tr: 10, bl: 0, br: 0 });
         this.readyBtn.add(readyBg);
 
-        const readyTxt = this.add.text(0, 0, '⚡ SAYA SIAP! ⚡', {
+        const readyTxt = this.add.text(0, 0, 'SAYA SIAP!', {
             fontFamily: FONT_PIXEL,
-            fontSize: '8.5px',
+            fontSize: '10px',
             color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.readyBtn.add(readyTxt);
@@ -366,9 +367,9 @@ export class MemoryScene extends Phaser.Scene {
         this.peekBg = this.add.graphics();
         this.peekBtn.add(this.peekBg);
 
-        this.peekText = this.add.text(0, 0, '👁️ INTIP (1x)', {
+        this.peekText = this.add.text(0, 0, 'INTIP (1x)', {
             fontFamily: FONT_PIXEL,
-            fontSize: '8.5px',
+            fontSize: '10px',
             color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.peekBtn.add(this.peekText);
@@ -393,7 +394,7 @@ export class MemoryScene extends Phaser.Scene {
             this.peekBg.fillRoundedRect(-90, -22, 180, 44, 10);
             this.peekBg.fillStyle(0xffffff, 0.2);
             this.peekBg.fillRoundedRect(-90, -22, 180, 22, { tl: 10, tr: 10, bl: 0, br: 0 });
-            this.peekText.setText('👁️ INTIP (1x)').setColor('#ffffff');
+            this.peekText.setText('INTIP (1x)').setColor('#ffffff');
         }
     }
 
@@ -418,7 +419,7 @@ export class MemoryScene extends Phaser.Scene {
             // 3. Tile Value Text
             const txt = this.add.text(0, 0, '', {
                 fontFamily: FONT_PIXEL,
-                fontSize: '14px',
+                fontSize: '20px',
                 color: '#ffffff'
             }).setOrigin(0.5).setResolution(4);
             c.add(txt);
@@ -445,55 +446,55 @@ export class MemoryScene extends Phaser.Scene {
         tile.shadow.clear();
 
         const halfW = w / 2, halfH = h / 2;
+        const radius = Math.min(halfW, halfH) * 0.88;
+
+        // Soft drop shadow circular
+        tile.shadow.fillStyle(0x000000, 0.16);
+        tile.shadow.fillCircle(0, 2, radius);
 
         if (state === 'REVEALED') {
-            // Blue Glossy Card (Fase Hafal)
-            tile.shadow.fillStyle(0x000000, 0.08);
-            tile.shadow.fillRoundedRect(-halfW + 1, -halfH + 1, w, h, 8);
-
+            // Card Bulat Hitam Polos (Fase Hafal - Angka Putih)
             tile.bodyG.fillStyle(C.TILE_REVEALED, 1);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h, 8);
-            tile.bodyG.fillStyle(0xffffff, 0.25);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h / 2, { tl: 8, tr: 8, bl: 0, br: 0 });
+            tile.bodyG.fillCircle(0, 0, radius);
+            tile.bodyG.lineStyle(1.5, 0x334155, 0.9);
+            tile.bodyG.strokeCircle(0, 0, radius);
+
             tile.txt.setColor('#ffffff').setVisible(true);
 
         } else if (state === 'HIDDEN') {
-            // Clean White Hidden Card (Fase Tebak)
-            tile.shadow.fillStyle(0x000000, 0.08);
-            tile.shadow.fillRoundedRect(-halfW + 1, -halfH + 1, w, h, 8);
-
+            // Card Bulat Hitam Polos Tertutup (Fase Tebak)
             tile.bodyG.fillStyle(C.TILE_HIDDEN, 1);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h, 8);
-            tile.bodyG.lineStyle(1.5, C.TILE_HIDDEN_BORDER, 0.8);
-            tile.bodyG.strokeRoundedRect(-halfW, -halfH, w, h, 8);
+            tile.bodyG.fillCircle(0, 0, radius);
+            tile.bodyG.lineStyle(1.5, C.TILE_HIDDEN_BORDER, 0.9);
+            tile.bodyG.strokeCircle(0, 0, radius);
+
             tile.txt.setVisible(false);
 
         } else if (state === 'CORRECT') {
-            // Green Glossy Success Card (Terbuka Benar)
-            tile.shadow.fillStyle(0x000000, 0.08);
-            tile.shadow.fillRoundedRect(-halfW + 1, -halfH + 1, w, h, 8);
-
+            // Green Success Card (Terbuka Benar - Bulat Hijau Polos & Angka Putih)
             tile.bodyG.fillStyle(C.TILE_CORRECT, 1);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h, 8);
-            tile.bodyG.fillStyle(0xffffff, 0.25);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h / 2, { tl: 8, tr: 8, bl: 0, br: 0 });
+            tile.bodyG.fillCircle(0, 0, radius);
+            tile.bodyG.lineStyle(1.5, 0x4ade80, 0.9);
+            tile.bodyG.strokeCircle(0, 0, radius);
+
             tile.txt.setColor('#ffffff').setVisible(true);
 
         } else if (state === 'HINT') {
-            // Amber Gold Flashing Hint Card
-            tile.shadow.fillStyle(0x000000, 0.08);
-            tile.shadow.fillRoundedRect(-halfW + 1, -halfH + 1, w, h, 8);
-
+            // Amber Gold Hint Card (Bulat & Angka Putih)
             tile.bodyG.fillStyle(C.TILE_HINT, 1);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h, 8);
-            tile.bodyG.fillStyle(0xffffff, 0.35);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h / 2, { tl: 8, tr: 8, bl: 0, br: 0 });
+            tile.bodyG.fillCircle(0, 0, radius);
+            tile.bodyG.lineStyle(1.5, 0xfde047, 0.9);
+            tile.bodyG.strokeCircle(0, 0, radius);
+
             tile.txt.setColor('#ffffff').setVisible(true);
 
         } else if (state === 'WRONG_FLASH') {
-            // Red Error Card
+            // Red Error Card (Bulat & Angka Putih)
             tile.bodyG.fillStyle(C.TILE_WRONG, 1);
-            tile.bodyG.fillRoundedRect(-halfW, -halfH, w, h, 8);
+            tile.bodyG.fillCircle(0, 0, radius);
+            tile.bodyG.lineStyle(1.5, 0xfca5a5, 0.9);
+            tile.bodyG.strokeCircle(0, 0, radius);
+
             tile.txt.setColor('#ffffff').setVisible(true);
         }
     }
@@ -578,8 +579,8 @@ export class MemoryScene extends Phaser.Scene {
             tile.isRevealed = false;
             tile.zone.setSize(tileSize, tileSize);
 
-            // Font size adjustment for 2-digit numbers on small tiles
-            const fontSize = tileSize < 50 ? '11px' : '13px';
+            // Font size adjustment for 2-digit numbers on tiles (enlarged for high clarity)
+            const fontSize = tileSize < 48 ? '16px' : (tileSize < 58 ? '19px' : '23px');
             tile.txt.setText(`${cellData.value}`).setFontSize(fontSize);
 
             this._drawTileGraphics(tile, 'REVEALED', tileSize, tileSize);
@@ -865,30 +866,30 @@ export class MemoryScene extends Phaser.Scene {
 
         // Title: LEVEL SELESAI
         this.resTitle = this.add.text(180, cardY + 28, 'LEVEL SELESAI!', {
-            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#16a34a'
+            fontFamily: FONT_PIXEL, fontSize: '14px', color: '#16a34a'
         }).setOrigin(0.5).setResolution(4);
         this.resultContainer.add(this.resTitle);
 
         // Stars Display
         this.resStarsText = this.add.text(180, cardY + 62, '⭐⭐⭐', {
-            fontSize: '24px'
+            fontSize: '26px'
         }).setOrigin(0.5);
         this.resultContainer.add(this.resStarsText);
 
         // Score Label
         this.resScoreLabel = this.add.text(180, cardY + 98, 'SKOR ANDA', {
-            fontFamily: FONT_PIXEL, fontSize: '7.5px', color: '#64748b'
+            fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#64748b'
         }).setOrigin(0.5).setResolution(4);
         this.resultContainer.add(this.resScoreLabel);
 
         this.resScoreVal = this.add.text(180, cardY + 124, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '20px', color: '#1e293b'
+            fontFamily: FONT_PIXEL, fontSize: '23px', color: '#1e293b'
         }).setOrigin(0.5).setResolution(4);
         this.resultContainer.add(this.resScoreVal);
 
         // Mistakes & Hint info
         this.resSubtext = this.add.text(180, cardY + 154, 'Sempurna tanpa kesalahan!', {
-            fontFamily: FONT_UI, fontSize: '10px', color: '#64748b'
+            fontFamily: FONT_UI, fontSize: '11.5px', color: '#64748b'
         }).setOrigin(0.5).setResolution(3);
         this.resultContainer.add(this.resSubtext);
 
@@ -899,8 +900,8 @@ export class MemoryScene extends Phaser.Scene {
         this._drawButton(btnNext, 180 - btnW / 2, btnNextY, btnW, btnH, C.BTN_GREEN);
         this.resultContainer.add(btnNext);
 
-        const btnNextTxt = this.add.text(180, btnNextY + btnH / 2, '> LANJUT LEVEL <', {
-            fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#ffffff'
+        const btnNextTxt = this.add.text(180, btnNextY + btnH / 2, 'LANJUT LEVEL', {
+            fontFamily: FONT_PIXEL, fontSize: '10px', color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.resultContainer.add(btnNextTxt);
 
@@ -920,7 +921,7 @@ export class MemoryScene extends Phaser.Scene {
         this.resultContainer.add(btnMenu);
 
         const btnMenuTxt = this.add.text(180, btnMenuY + 16, 'PILIH LEVEL', {
-            fontFamily: FONT_PIXEL, fontSize: '7.5px', color: '#ffffff'
+            fontFamily: FONT_PIXEL, fontSize: '9px', color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.resultContainer.add(btnMenuTxt);
 
@@ -966,23 +967,23 @@ export class MemoryScene extends Phaser.Scene {
         this.gameOverContainer.add(cardBg);
 
         const title = this.add.text(180, cardY + 28, 'NYAWA HABIS!', {
-            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#ef4444'
+            fontFamily: FONT_PIXEL, fontSize: '14px', color: '#ef4444'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(title);
 
         const sub = this.add.text(180, cardY + 60, 'Jangan menyerah, coba lagi!', {
-            fontFamily: FONT_UI, fontSize: '11px', color: '#64748b'
+            fontFamily: FONT_UI, fontSize: '12px', color: '#64748b'
         }).setOrigin(0.5).setResolution(3);
         this.gameOverContainer.add(sub);
 
         // Score display
         const scLabel = this.add.text(180, cardY + 95, 'SKOR ANDA', {
-            fontFamily: FONT_PIXEL, fontSize: '7.5px', color: '#64748b'
+            fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#64748b'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(scLabel);
 
         this.goScoreVal = this.add.text(180, cardY + 120, '0', {
-            fontFamily: FONT_PIXEL, fontSize: '18px', color: '#1e293b'
+            fontFamily: FONT_PIXEL, fontSize: '22px', color: '#1e293b'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(this.goScoreVal);
 
@@ -993,8 +994,8 @@ export class MemoryScene extends Phaser.Scene {
         this._drawButton(btnRetry, 180 - btnW / 2, btnRetryY, btnW, btnH, C.BTN_BG);
         this.gameOverContainer.add(btnRetry);
 
-        const retryTxt = this.add.text(180, btnRetryY + btnH / 2, '> ULANG LEVEL <', {
-            fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#ffffff'
+        const retryTxt = this.add.text(180, btnRetryY + btnH / 2, 'ULANG LEVEL', {
+            fontFamily: FONT_PIXEL, fontSize: '10px', color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(retryTxt);
 
@@ -1014,7 +1015,7 @@ export class MemoryScene extends Phaser.Scene {
         this.gameOverContainer.add(btnMenu);
 
         const menuTxt = this.add.text(180, btnMenuY + 15, 'PILIH LEVEL', {
-            fontFamily: FONT_PIXEL, fontSize: '7.5px', color: '#ffffff'
+            fontFamily: FONT_PIXEL, fontSize: '9px', color: '#ffffff'
         }).setOrigin(0.5).setResolution(4);
         this.gameOverContainer.add(menuTxt);
 
@@ -1045,38 +1046,31 @@ export class MemoryScene extends Phaser.Scene {
         dim.fillRect(0, 0, 360, 640);
         this.pauseContainer.add(dim);
 
-        const modalW = 284, modalH = 190;
-        const modalX = 180 - modalW / 2, modalY = 215;
+        // Clean Modal Card Centered Perfectly (No text)
+        const modalW = 200, modalH = 200;
+        const modalX = 180 - modalW / 2, modalY = 320 - modalH / 2;
         const modalBg = this.add.graphics();
         this._drawCard(modalBg, modalX, modalY, modalW, modalH);
         this.pauseContainer.add(modalBg);
 
-        const pauseTitle = this.add.text(180, modalY + 24, 'JEDA', {
-            fontFamily: FONT_PIXEL, fontSize: '12px', color: '#0f172a'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(pauseTitle);
-
-        const pauseSub = this.add.text(180, modalY + 42, 'SENTUH UNTUK LANJUT', {
-            fontFamily: FONT_PIXEL, fontSize: '6.5px', color: '#64748b'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(pauseSub);
-
-        // 3 Action Cards: Resume, Restart, Audio Toggle
+        // 4 Action Cards in 2x2 Grid Centered:
+        // Baris 1: Resume (▶), Restart (↺)
+        // Baris 2: Audio Toggle (🔊/🔇), Keluar Menu Level (🚪/⬅)
         const cardSize = 64;
-        const cardSpacing = 14;
-        const cardY = modalY + 95;
+        const col1X = 180 - 39;
+        const col2X = 180 + 39;
+        const row1Y = 320 - 39;
+        const row2Y = 320 + 39;
 
         // 1. Resume Card (▶)
-        const c1X = 180 - cardSize - cardSpacing;
-        const resumeCard = this._buildActionCard(c1X, cardY, cardSize, 'resume', () => {
+        const resumeCard = this._buildActionCard(col1X, row1Y, cardSize, 'resume', () => {
             triggerHaptic(15);
             this._togglePause(false);
         });
         this.pauseContainer.add(resumeCard);
 
         // 2. Restart Card (↺)
-        const c2X = 180;
-        const restartCard = this._buildActionCard(c2X, cardY, cardSize, 'restart', () => {
+        const restartCard = this._buildActionCard(col2X, row1Y, cardSize, 'restart', () => {
             triggerHaptic(20);
             this._togglePause(false);
             this.attemptSalt++;
@@ -1085,8 +1079,7 @@ export class MemoryScene extends Phaser.Scene {
         this.pauseContainer.add(restartCard);
 
         // 3. Audio Toggle Card (🔊 / 🔇)
-        const c3X = 180 + cardSize + cardSpacing;
-        const soundCard = this._buildActionCard(c3X, cardY, cardSize, 'audio', () => {
+        const soundCard = this._buildActionCard(col1X, row2Y, cardSize, 'audio', () => {
             this.audio.toggleMute();
             this._drawAudioIcon();
             this._drawCardAudioIcon();
@@ -1094,21 +1087,15 @@ export class MemoryScene extends Phaser.Scene {
         });
         this.pauseContainer.add(soundCard);
 
-        // Keluar ke Level Select
-        const exitTxt = this.add.text(180, modalY + 160, '< KELUAR KE MENU LEVEL >', {
-            fontFamily: FONT_PIXEL, fontSize: '6.5px', color: '#ef4444'
-        }).setOrigin(0.5).setResolution(4);
-        this.pauseContainer.add(exitTxt);
-
-        const exitHit = this.add.zone(180, modalY + 160, 200, 24).setInteractive({ useHandCursor: true });
-        this.pauseContainer.add(exitHit);
-        exitHit.on('pointerdown', () => {
+        // 4. Keluar ke Menu Level Card (🚪/⬅)
+        const exitCard = this._buildActionCard(col2X, row2Y, cardSize, 'exit', () => {
             triggerHaptic(15);
             this.cameras.main.fadeOut(180, 241, 245, 249);
             this.time.delayedCall(180, () => {
                 this.scene.start('MemoryLevelSelectScene');
             });
         });
+        this.pauseContainer.add(exitCard);
     }
 
     _buildActionCard(x, y, size, type, onAction) {
@@ -1126,20 +1113,33 @@ export class MemoryScene extends Phaser.Scene {
 
         if (type === 'resume') {
             iconG.fillStyle(0x1e293b, 1);
-            iconG.fillTriangle(-5, -10, -5, 10, 8, 0);
+            iconG.fillTriangle(-8, -14, -8, 14, 12, 0);
         } else if (type === 'restart') {
             if (this.textures.exists('restart-icon')) {
                 const restartImg = this.add.image(0, 0, 'restart-icon')
-                    .setDisplaySize(26, 26)
+                    .setDisplaySize(34, 34)
                     .setOrigin(0.5);
                 c.add(restartImg);
             } else {
                 iconG.fillStyle(0x1e293b, 1);
-                iconG.fillCircle(0, 0, 8);
+                iconG.fillCircle(0, 0, 10);
             }
         } else if (type === 'audio') {
             this.pauseAudioIconG = iconG;
             this._drawCardAudioIcon();
+        } else if (type === 'exit') {
+            // Icon Keluar ke Menu Level (Frame Pintu + Panah Keluar)
+            iconG.lineStyle(2.5, 0xef4444, 1);
+            iconG.beginPath();
+            iconG.moveTo(1, -12);
+            iconG.lineTo(11, -12);
+            iconG.lineTo(11, 12);
+            iconG.lineTo(1, 12);
+            iconG.strokePath();
+
+            iconG.lineBetween(4, 0, -11, 0);
+            iconG.fillStyle(0xef4444, 1);
+            iconG.fillTriangle(-12, 0, -5, -6, -5, 6);
         }
 
         const zone = this.add.zone(0, 0, size, size).setInteractive({ useHandCursor: true });
@@ -1167,20 +1167,20 @@ export class MemoryScene extends Phaser.Scene {
         const color = isMuted ? 0x94a3b8 : 0x1e293b;
         this.pauseAudioIconG.fillStyle(color, 1);
 
-        this.pauseAudioIconG.fillRect(-10, -4, 4, 8);
-        this.pauseAudioIconG.fillTriangle(-6, -4, -6, 4, 1, 9);
-        this.pauseAudioIconG.fillTriangle(-6, -4, 1, 9, 1, -9);
+        this.pauseAudioIconG.fillRect(-12, -5, 5, 10);
+        this.pauseAudioIconG.fillTriangle(-7, -5, -7, 5, 3, 12);
+        this.pauseAudioIconG.fillTriangle(-7, -5, 3, 12, 3, -12);
 
         if (isMuted) {
             this.pauseAudioIconG.lineStyle(2.5, 0xef4444, 1);
-            this.pauseAudioIconG.lineBetween(-12, 10, 12, -10);
+            this.pauseAudioIconG.lineBetween(-13, 12, 13, -12);
         } else {
-            this.pauseAudioIconG.lineStyle(2, 0x1e293b, 1);
+            this.pauseAudioIconG.lineStyle(2.5, 0x1e293b, 1);
             this.pauseAudioIconG.beginPath();
-            this.pauseAudioIconG.arc(0, 0, 7, -Math.PI / 3, Math.PI / 3, false);
+            this.pauseAudioIconG.arc(2, 0, 8, -Math.PI / 3, Math.PI / 3, false);
             this.pauseAudioIconG.strokePath();
             this.pauseAudioIconG.beginPath();
-            this.pauseAudioIconG.arc(0, 0, 12, -Math.PI / 3, Math.PI / 3, false);
+            this.pauseAudioIconG.arc(2, 0, 15, -Math.PI / 3, Math.PI / 3, false);
             this.pauseAudioIconG.strokePath();
         }
     }
@@ -1193,6 +1193,18 @@ export class MemoryScene extends Phaser.Scene {
             this.pauseContainer.setAlpha(0);
             this.tweens.add({ targets: this.pauseContainer, alpha: 1, duration: 150 });
         }
+    }
+
+    _setupAutoPause() {
+        this._onVisibilityChange = () => {
+            if (document.hidden && this.scene.isActive() && (this.gameState === 'MEMORIZE' || this.gameState === 'GUESS') && !this.isPaused) {
+                this._togglePause(true);
+            }
+        };
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
+        this.events.once('shutdown', () => {
+            document.removeEventListener('visibilitychange', this._onVisibilityChange);
+        });
     }
 
     // ── Helper Drawings (Identical Tenten) ───────────────────

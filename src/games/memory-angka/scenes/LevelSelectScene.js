@@ -37,7 +37,7 @@ export class LevelSelectScene extends Phaser.Scene {
         this.cameras.main.setZoom(dpr);
         this.cameras.main.centerOn(180, 320);
 
-        this.unlockedLevel = getMemoryUnlockedLevel();
+        this.unlockedLevel = Math.max(TOTAL_CAMPAIGN_LEVELS, getMemoryUnlockedLevel());
         this.starsData = getMemoryLevelStars();
         this.totalStars = getMemoryTotalStars();
 
@@ -90,14 +90,14 @@ export class LevelSelectScene extends Phaser.Scene {
         // 2. Title & Subtitle BPS
         this.add.text(54, topY - 7, 'MEMORY ANGKA', {
             fontFamily: FONT_UI,
-            fontSize: '14px',
+            fontSize: '16px',
             fontStyle: '800',
             color: C.SCORE_VAL
         }).setOrigin(0, 0.5).setResolution(3).setDepth(20);
 
         this.add.text(54, topY + 7, 'Pilih Level Permainan', {
             fontFamily: FONT_UI,
-            fontSize: '9px',
+            fontSize: '10.5px',
             fontStyle: '400',
             color: C.SUBTEXT
         }).setOrigin(0, 0.5).setResolution(3).setDepth(20);
@@ -133,7 +133,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
         this.add.text(180, starPillY, `⭐ ${this.totalStars} / 90 BINTANG`, {
             fontFamily: FONT_PIXEL,
-            fontSize: '7.5px',
+            fontSize: '8.5px',
             color: '#b45309'
         }).setOrigin(0.5).setResolution(4).setDepth(20);
     }
@@ -279,7 +279,7 @@ export class LevelSelectScene extends Phaser.Scene {
             // Level Text
             const lvlTxt = this.add.text(0, -14, `LV ${lvl}`, {
                 fontFamily: FONT_PIXEL,
-                fontSize: '10px',
+                fontSize: '11.5px',
                 color: C.SCORE_VAL
             }).setOrigin(0.5).setResolution(4);
             c.add(lvlTxt);
@@ -288,7 +288,7 @@ export class LevelSelectScene extends Phaser.Scene {
             if (isDesc) {
                 const tag = this.add.text(0, 0, 'TURUN ↘', {
                     fontFamily: FONT_PIXEL,
-                    fontSize: '5.5px',
+                    fontSize: '6.5px',
                     color: '#ea580c'
                 }).setOrigin(0.5).setResolution(4);
                 c.add(tag);
@@ -299,7 +299,7 @@ export class LevelSelectScene extends Phaser.Scene {
             const starColor = stars > 0 ? '#b45309' : '#94a3b8';
             const st = this.add.text(0, isDesc ? 16 : 10, starsTxt, {
                 fontFamily: FONT_PIXEL,
-                fontSize: '7px',
+                fontSize: '8px',
                 color: starColor
             }).setOrigin(0.5).setResolution(4);
             c.add(st);
@@ -334,13 +334,13 @@ export class LevelSelectScene extends Phaser.Scene {
             bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
 
             const lockTxt = this.add.text(0, -4, '🔒', {
-                fontSize: '14px'
+                fontSize: '15px'
             }).setOrigin(0.5);
             c.add(lockTxt);
 
             const numTxt = this.add.text(0, 16, `${lvl}`, {
                 fontFamily: FONT_PIXEL,
-                fontSize: '7px',
+                fontSize: '8px',
                 color: '#94a3b8'
             }).setOrigin(0.5).setResolution(4);
             c.add(numTxt);
@@ -368,7 +368,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
             const txt = this.add.text(0, 0, '♾️ MODE ENDLESS (TANPA BATAS)', {
                 fontFamily: FONT_PIXEL,
-                fontSize: '8px',
+                fontSize: '9.5px',
                 color: '#ffffff'
             }).setOrigin(0.5).setResolution(4);
             this.endlessBtn.add(txt);
@@ -392,7 +392,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
             const txt = this.add.text(0, 0, '🔒 ENDLESS (BUTUH 45 BINTANG)', {
                 fontFamily: FONT_PIXEL,
-                fontSize: '7.5px',
+                fontSize: '8.5px',
                 color: '#64748b'
             }).setOrigin(0.5).setResolution(4);
             this.endlessBtn.add(txt);

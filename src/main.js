@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { OpeningScene } from './scenes/OpeningScene.js';
 import { HubScene } from './scenes/HubScene.js';
 import { BlockPuzzleScene } from './games/tenten/scenes/BlockPuzzleScene.js';
 import { LevelSelectScene } from './games/memory-angka/scenes/LevelSelectScene.js';
@@ -6,7 +7,7 @@ import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
 
 /**
  * BPS Waiting Game - Main Entry Point
- * Multi-Game Hub (Tenten Match Color & Memory Angka)
+ * Opening Splash -> Multi-Game Hub (Tenten & Memory Angka)
  */
 
 const DPR = typeof window !== 'undefined'
@@ -39,29 +40,17 @@ const config = {
     input: {
         activePointers: 2
     },
-    scene: [HubScene, BlockPuzzleScene, LevelSelectScene, MemoryScene]
+    scene: [OpeningScene, HubScene, BlockPuzzleScene, LevelSelectScene, MemoryScene]
 };
 
 const startGame = () => {
+    if (window.__bpsGameStarted) return;
+    window.__bpsGameStarted = true;
     new Phaser.Game(config);
 };
 
-if (document.fonts && document.fonts.load) {
-    Promise.race([
-        Promise.all([
-            document.fonts.load('700 24px "Fredoka"'),
-            document.fonts.load('600 20px "Fredoka"'),
-            document.fonts.load('800 12px "Nunito"'),
-            document.fonts.load('700 12px "Nunito"'),
-            document.fonts.load('10px "Public Pixel"'),
-            document.fonts.load('900 16px "Inter"'),
-            document.fonts.load('800 16px "Inter"'),
-            document.fonts.load('400 10px "Inter"'),
-            document.fonts.load('500 10px "Inter"'),
-            document.fonts.ready
-        ]),
-        new Promise(resolve => setTimeout(resolve, 400))
-    ]).then(startGame).catch(startGame);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    startGame();
 } else {
-    window.addEventListener('load', startGame);
+    window.addEventListener('DOMContentLoaded', startGame);
 }

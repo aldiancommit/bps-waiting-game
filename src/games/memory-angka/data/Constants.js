@@ -14,9 +14,9 @@ export const FONT_UI = "'Inter', system-ui, -apple-system, BlinkMacSystemFont, '
 // Layout & Grid Bounds (360x640)
 export const BOARD_AREA = {
     X: 18,
-    Y: 132,
+    Y: 144,
     WIDTH: 324,
-    HEIGHT: 380
+    HEIGHT: 376
 };
 
 // Gameplay Rules
@@ -53,10 +53,10 @@ export const C = {
     // Tile States
     TILE_EMPTY: 0xe2e8f0,
     TILE_BORDER: 0xcbd5e1,
-    TILE_HIDDEN: 0xffffff,
-    TILE_HIDDEN_BORDER: 0x94a3b8,
-    TILE_REVEALED: 0x3b82f6, // Blue primary
-    TILE_CORRECT: 0x22c55e,  // Green success
+    TILE_HIDDEN: 0x0f172a, // Hitam polos pekat
+    TILE_HIDDEN_BORDER: 0x334155,
+    TILE_REVEALED: 0x0f172a, // Hitam polos pekat
+    TILE_CORRECT: 0x16a34a,  // Green success
     TILE_WRONG: 0xef4444,    // Red error
     TILE_HINT: 0xf59e0b,     // Gold Amber hint
     
