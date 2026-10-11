@@ -1,9 +1,10 @@
 /**
  * Enhanced 8-Bit Arcade Synthesizer & Haptic Feedback
  * Native WebAudio API Implementation (100% Offline, Zero External Audio Assets)
+ * Shared across game modules.
  */
 
-import { STORAGE_KEYS } from './Constants.js';
+import { TENTEN_STORAGE_KEYS } from './Storage.js';
 
 export class RetroAudio {
     constructor() {
@@ -11,7 +12,7 @@ export class RetroAudio {
         this.masterGain = null;
         this.noiseBuffer = null;
         this.isMuted = typeof window !== 'undefined'
-            ? (localStorage.getItem(STORAGE_KEYS.MUTED) === 'true' || localStorage.getItem('bps_1010_muted') === 'true')
+            ? (localStorage.getItem(TENTEN_STORAGE_KEYS.MUTED) === 'true' || localStorage.getItem('bps_1010_muted') === 'true')
             : false;
         this.lastClearTime = 0;
 
@@ -33,7 +34,7 @@ export class RetroAudio {
         this.isMuted = !!muted;
         if (typeof window !== 'undefined') {
             try {
-                localStorage.setItem(STORAGE_KEYS.MUTED, this.isMuted ? 'true' : 'false');
+                localStorage.setItem(TENTEN_STORAGE_KEYS.MUTED, this.isMuted ? 'true' : 'false');
             } catch (e) { }
         }
     }
@@ -353,6 +354,69 @@ export class RetroAudio {
                 osc.stop(noteTime + note.d);
             });
         } catch (e) { }
+    }
+
+    /**
+     * Crisp ascending pitch blip on correct tile tap (scales up with combo).
+     */
+    playCorrectTap(combo = 1) {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this._getNow();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            const scale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+            const noteIdx = Math.min(scale.length - 1, Math.max(0, combo - 1));
+            const baseFreq = scale[noteIdx];
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.linearRampToValueAtTime(baseFreq * 1.08, now + 0.08);
+
+            gain.gain.setValueAtTime(0.16, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.085);
+
+            osc.connect(gain);
+            gain.connect(this._getOut());
+            osc.start(now);
+            osc.stop(now + 0.085);
+        } catch (e) { }
+    }
+
+    /**
+     * Low arcade thud/buzz on wrong tile tap.
+     */
+    playWrongTap() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this._getNow();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, now);
+            osc.frequency.exponentialRampToValueAtTime(75, now + 0.16);
+
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.linearRampToValueAtTime(0.0001, now + 0.16);
+
+            osc.connect(gain);
+            gain.connect(this._getOut());
+            osc.start(now);
+            osc.stop(now + 0.16);
+        } catch (e) { }
+    }
+
+    /**
+     * Shimmering reveal sound for Peek / Intip helper.
+     */
+    playPeek() {
+        this.playRainbowMatch();
     }
 
     /**

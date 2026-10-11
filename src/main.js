@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
-import { BlockPuzzleScene } from './scenes/BlockPuzzleScene.js';
+import { HubScene } from './scenes/HubScene.js';
+import { BlockPuzzleScene } from './games/tenten/scenes/BlockPuzzleScene.js';
+import { LevelSelectScene } from './games/memory-angka/scenes/LevelSelectScene.js';
+import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
 
 /**
  * BPS Waiting Game - Main Entry Point
- * Pixel Art Theme
+ * Multi-Game Hub (Tenten Match Color & Memory Angka)
  */
 
 const DPR = typeof window !== 'undefined'
@@ -36,7 +39,7 @@ const config = {
     input: {
         activePointers: 2
     },
-    scene: BlockPuzzleScene
+    scene: [HubScene, BlockPuzzleScene, LevelSelectScene, MemoryScene]
 };
 
 const startGame = () => {
@@ -46,6 +49,10 @@ const startGame = () => {
 if (document.fonts && document.fonts.load) {
     Promise.race([
         Promise.all([
+            document.fonts.load('700 24px "Fredoka"'),
+            document.fonts.load('600 20px "Fredoka"'),
+            document.fonts.load('800 12px "Nunito"'),
+            document.fonts.load('700 12px "Nunito"'),
             document.fonts.load('10px "Public Pixel"'),
             document.fonts.load('900 16px "Inter"'),
             document.fonts.load('800 16px "Inter"'),

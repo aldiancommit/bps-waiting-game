@@ -1,5 +1,5 @@
 /**
- * Game constants for 1010 Block Puzzle.
+ * Game constants for 1010 Block Puzzle (Tenten Match Color).
  * Clean White Theme — Glossy Blocks
  *
  * All spatial values are in logical pixels (360×640 coordinate space).

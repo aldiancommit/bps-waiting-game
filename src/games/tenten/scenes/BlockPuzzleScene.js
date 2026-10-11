@@ -5,8 +5,14 @@ import {
     COLOR_BOMB,
     POOL_1,
     POOL_2,
+    POOL_3_STARTING,
+    POOL_3_SAVIOR,
     POOL_3,
+    POOL_4_STARTING,
+    POOL_4_SAVIOR,
     POOL_4,
+    POOL_5_SAVIOR,
+    POOL_5_GIANT,
     POOL_5,
     shapeKey
 } from '../data/BlockShapes.js';
@@ -20,11 +26,11 @@ import {
     FONT_PIXEL, FONT_UI,
     C
 } from '../utils/Constants.js';
-import { RetroAudio, triggerHaptic } from '../utils/Audio.js';
+import { RetroAudio, triggerHaptic } from '../../../shared/Audio.js';
 import {
     getHighScore, saveHighScore,
     clearGameState
-} from '../utils/Storage.js';
+} from '../../../shared/Storage.js';
 
 export class BlockPuzzleScene extends Phaser.Scene {
     constructor() {
@@ -1552,8 +1558,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
             }
         }
 
-        // 3. Universal fallbacks to guarantee fitting
-        for (const fallbackPool of [POOL_2, POOL_1]) {
+        // 3. Universal Savior fallbacks to guarantee fitting into tight pockets
+        for (const fallbackPool of [POOL_1, POOL_2, POOL_3_SAVIOR]) {
             const shuffledFb = Phaser.Utils.Array.Shuffle([...fallbackPool]);
             for (const cells of shuffledFb) {
                 if (this._getValidPlacements(cells).length > 0) {
@@ -1569,7 +1575,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
      * Colorize piece with STRICT RULE:
      * No single color may appear more than 2 times in any piece (max 2 per color).
      * Synergizes with neighboring board cells to reward strategic placement.
-     * Incorporates special power-up blocks (Rainbow Wildcard & Bomb).
+     * Incorporates special power-up blocks (Rainbow Wildcard & Bomb) with dynamic pity timer.
      */
     _colorizePiece(shapeCells) {
         const placements = this._getValidPlacements(shapeCells);
@@ -1681,7 +1687,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 assignedColors.push(primaryColor, primaryColor, secondaryColor, secondaryColor);
             }
         } else {
-            // 5 cells: 60% 5 distinct colors (A, B, C, D, E), 40% (A, A, B, C, D)
+            // 5+ cells: 5 distinct colors or 1 pair + 3 distinct
             const fifthOptions = ACTIVE_COLORS.filter(c => c.id !== primaryColor.id && c.id !== secondaryColor.id && c.id !== tertiaryColor.id && c.id !== quaternaryColor.id);
             const fifthColor = fifthOptions.length > 0 ? fifthOptions[0] : secondaryColor;
             if (Math.random() < 0.60) {
@@ -1689,15 +1695,19 @@ export class BlockPuzzleScene extends Phaser.Scene {
             } else {
                 assignedColors.push(primaryColor, primaryColor, secondaryColor, tertiaryColor, quaternaryColor);
             }
+            while (assignedColors.length < numCells) {
+                assignedColors.push(Phaser.Utils.Array.GetRandom(ACTIVE_COLORS));
+            }
         }
 
-        // Strict Safety Guard: ensure no color appears more than 2 times
+        // Strict Safety Guard: ensure no single color appears more than 2 times
+        const maxAllowed = Math.max(2, Math.ceil(numCells / ACTIVE_COLORS.length));
         const colorCounts = new Map();
         assignedColors.forEach(c => colorCounts.set(c.id, (colorCounts.get(c.id) || 0) + 1));
         for (let i = 0; i < assignedColors.length; i++) {
             const cId = assignedColors[i].id;
-            if (colorCounts.get(cId) > 2) {
-                const spare = ACTIVE_COLORS.find(c => (colorCounts.get(c.id) || 0) < 2);
+            if (colorCounts.get(cId) > maxAllowed) {
+                const spare = ACTIVE_COLORS.find(c => (colorCounts.get(c.id) || 0) < maxAllowed);
                 if (spare) {
                     colorCounts.set(cId, colorCounts.get(cId) - 1);
                     colorCounts.set(spare.id, (colorCounts.get(spare.id) || 0) + 1);
@@ -1706,16 +1716,23 @@ export class BlockPuzzleScene extends Phaser.Scene {
             }
         }
 
-        // Special Block Roll (Rainbow Wildcard / Bomb)
-        const specialSpawnChance = this.isFeverActive ? 0.15 : 0.05;
+        // Special Block Roll (Rainbow Wildcard / Bomb) with Pity Timer
+        let specialSpawnChance = this.isFeverActive ? 0.20 : 0.09;
+        if (this.piecesSinceSpecial >= 12) {
+            specialSpawnChance += 0.12;
+        }
+
         if (Math.random() < specialSpawnChance) {
+            this.piecesSinceSpecial = 0;
             const specialIndex = Phaser.Math.Between(0, assignedColors.length - 1);
-            if (Math.random() < 0.55) {
+            if (Math.random() < 0.50) {
                 assignedColors[specialIndex] = COLOR_RAINBOW;
             } else {
                 const base = assignedColors[specialIndex];
                 assignedColors[specialIndex] = { ...base, isSpecial: 'bomb' };
             }
+        } else {
+            this.piecesSinceSpecial = (this.piecesSinceSpecial || 0) + 1;
         }
 
         return shapeCells.map(([cx, cy], idx) => [cx, cy, assignedColors[idx]]);
@@ -1724,23 +1741,23 @@ export class BlockPuzzleScene extends Phaser.Scene {
     spawnSlotPieces() {
         const occupancy = this._getBoardOccupancy();
 
-        // Wave composition with rich shape variety and adaptive tension
+        // Wave composition: Starting Blocks vs Savior Blocks vs strictly limited Giant Blocks
         let spec0, spec1, spec2;
         if (occupancy > 0.65) {
-            // Danger state: guarantee small/medium fits to allow recovery
-            spec0 = [{ pool: POOL_1, weight: 0.50 }, { pool: POOL_2, weight: 0.50 }];
-            spec1 = [{ pool: POOL_2, weight: 0.50 }, { pool: POOL_3, weight: 0.50 }];
-            spec2 = [{ pool: POOL_3, weight: 0.60 }, { pool: POOL_2, weight: 0.40 }];
+            // Danger state: 100% Savior & Compact focus to rescue player from grid deadlock (0% Giant)
+            spec0 = [{ pool: POOL_1, weight: 0.45 }, { pool: POOL_2, weight: 0.40 }, { pool: POOL_3_SAVIOR, weight: 0.15 }];
+            spec1 = [{ pool: POOL_2, weight: 0.40 }, { pool: POOL_3_SAVIOR, weight: 0.40 }, { pool: POOL_4_SAVIOR, weight: 0.20 }];
+            spec2 = [{ pool: POOL_1, weight: 0.35 }, { pool: POOL_2, weight: 0.40 }, { pool: POOL_3, weight: 0.25 }];
         } else if (occupancy > 0.35) {
-            // Mid game: rich variety, strategic puzzle challenge
-            spec0 = [{ pool: POOL_1, weight: 0.20 }, { pool: POOL_2, weight: 0.40 }, { pool: POOL_3, weight: 0.40 }];
-            spec1 = [{ pool: POOL_3, weight: 0.50 }, { pool: POOL_4, weight: 0.50 }];
-            spec2 = [{ pool: POOL_3, weight: 0.35 }, { pool: POOL_4, weight: 0.45 }, { pool: POOL_5, weight: 0.20 }];
+            // Mid game: rich strategic puzzle variety (Giant blocks strictly limited to 4%)
+            spec0 = [{ pool: POOL_1, weight: 0.15 }, { pool: POOL_2, weight: 0.40 }, { pool: POOL_3, weight: 0.35 }, { pool: POOL_4, weight: 0.10 }];
+            spec1 = [{ pool: POOL_2, weight: 0.25 }, { pool: POOL_3, weight: 0.45 }, { pool: POOL_4_SAVIOR, weight: 0.25 }, { pool: POOL_5_SAVIOR, weight: 0.05 }];
+            spec2 = [{ pool: POOL_3, weight: 0.40 }, { pool: POOL_4, weight: 0.45 }, { pool: POOL_5_SAVIOR, weight: 0.11 }, { pool: POOL_5_GIANT, weight: 0.04 }];
         } else {
-            // Early game / low occupancy: interesting patterns to paint the board
-            spec0 = [{ pool: POOL_2, weight: 0.40 }, { pool: POOL_3, weight: 0.60 }];
-            spec1 = [{ pool: POOL_3, weight: 0.45 }, { pool: POOL_4, weight: 0.55 }];
-            spec2 = [{ pool: POOL_4, weight: 0.60 }, { pool: POOL_5, weight: 0.40 }];
+            // Early game / low occupancy: Starting Foundation Blocks Dominant (Dominoes, 3-lines, 2x2 squares)
+            spec0 = [{ pool: POOL_2, weight: 0.45 }, { pool: POOL_3_STARTING, weight: 0.35 }, { pool: POOL_4_STARTING, weight: 0.20 }];
+            spec1 = [{ pool: POOL_3, weight: 0.45 }, { pool: POOL_4, weight: 0.40 }, { pool: POOL_5_SAVIOR, weight: 0.15 }];
+            spec2 = [{ pool: POOL_3_STARTING, weight: 0.35 }, { pool: POOL_4_STARTING, weight: 0.40 }, { pool: POOL_5_SAVIOR, weight: 0.17 }, { pool: POOL_5_GIANT, weight: 0.08 }];
         }
 
         const slotSpecs = [spec0, spec1, spec2];
@@ -1957,8 +1974,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.pauseContainer.add(dim);
 
         // Modal Card Container
-        const modalW = 284, modalH = 176;
-        const modalX = 180 - modalW / 2, modalY = 222;
+        const modalW = 284, modalH = 186;
+        const modalX = 180 - modalW / 2, modalY = 216;
         const modalBg = this.add.graphics();
         this._drawCard(modalBg, modalX, modalY, modalW, modalH);
         this.pauseContainer.add(modalBg);
@@ -1978,7 +1995,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         // Clean white card background, rounded corners, solid dark slate geometric vector icons, NO text
         const cardSize = 68;
         const cardSpacing = 14;
-        const cardY = modalY + 110;
+        const cardY = modalY + 98;
 
         // Card 1: Resume (▶)
         const c1X = 180 - cardSize - cardSpacing;
@@ -2006,6 +2023,22 @@ export class BlockPuzzleScene extends Phaser.Scene {
             triggerHaptic(15);
         });
         this.pauseContainer.add(this.soundCard);
+
+        // Exit to Hub Button
+        const exitTxt = this.add.text(180, modalY + 158, '< KELUAR KE MENU UTAMA >', {
+            fontFamily: FONT_PIXEL, fontSize: '6.5px', color: '#ef4444'
+        }).setOrigin(0.5).setResolution(4);
+        this.pauseContainer.add(exitTxt);
+
+        const exitHit = this.add.zone(180, modalY + 158, 200, 24).setInteractive({ useHandCursor: true });
+        this.pauseContainer.add(exitHit);
+        exitHit.on('pointerdown', () => {
+            triggerHaptic(15);
+            this.cameras.main.fadeOut(180, 241, 245, 249);
+            this.time.delayedCall(180, () => {
+                this.scene.start('HubScene');
+            });
+        });
     }
 
     _buildActionCard(x, y, size, type, onAction) {

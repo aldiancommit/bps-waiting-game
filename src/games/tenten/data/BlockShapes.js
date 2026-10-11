@@ -1,6 +1,6 @@
 /**
- * Block Shapes and Color Definitions for 1010 Block Puzzle.
- * Rich pool of unique shapes (1 to 5 cells) designed for engaging gameplay.
+ * Block Shapes and Color Definitions for 1010 Block Puzzle (Tenten Match Color).
+ * Dynamic Shape Pools: Starting Foundation Blocks, Savior Compact Blocks, and Limited Giant Blocks.
  */
 
 export const ACTIVE_COLORS = [
@@ -25,32 +25,42 @@ export const COLOR_BOMB = {
 
 export const BLOCK_COLORS = [...ACTIVE_COLORS];
 
-// 1-Cell (Dot)
+// 1-Cell (Dot - Universal Gap Filler / Ultimate Savior)
 export const POOL_1 = [
     [[0, 0]]
 ];
 
-// 2-Cell (Dominoes)
+// 2-Cell (Dominoes - Foundation & Savior)
 export const POOL_2 = [
     [[0, 0], [1, 0]],
     [[0, 0], [0, 1]]
 ];
 
-// 3-Cell (Trominoes: Lines, Corners, Steps)
-export const POOL_3 = [
+// 3-Cell: Starting Lines (Foundation)
+export const POOL_3_STARTING = [
     [[0, 0], [1, 0], [2, 0]],
-    [[0, 0], [0, 1], [0, 2]],
+    [[0, 0], [0, 1], [0, 2]]
+];
+
+// 3-Cell: Savior Corners (Compact Rescue)
+export const POOL_3_SAVIOR = [
     [[0, 0], [1, 0], [0, 1]],
     [[0, 0], [1, 0], [1, 1]],
     [[0, 0], [0, 1], [1, 1]],
-    [[1, 0], [0, 1], [1, 1]],
-    [[0, 0], [1, 1]]
+    [[1, 0], [0, 1], [1, 1]]
 ];
 
-// 4-Cell (Tetraminoes: Square, T, L, Z, S, 4-Line)
-export const POOL_4 = [
-    // 2x2 Square
-    [[0, 0], [1, 0], [0, 1], [1, 1]],
+export const POOL_3 = [...POOL_3_STARTING, ...POOL_3_SAVIOR];
+
+// 4-Cell: Starting Blocks (2x2 Square, 4-Lines)
+export const POOL_4_STARTING = [
+    [[0, 0], [1, 0], [0, 1], [1, 1]], // 2x2 Square
+    [[0, 0], [1, 0], [2, 0], [3, 0]], // Horiz 4-Line
+    [[0, 0], [0, 1], [0, 2], [0, 3]]  // Vert 4-Line
+];
+
+// 4-Cell: Savior Compact Blocks (T, L, Zig-Zag S/Z)
+export const POOL_4_SAVIOR = [
     // Small T (4 rotations)
     [[0, 0], [1, 0], [2, 0], [1, 1]],
     [[1, 0], [0, 1], [1, 1], [2, 1]],
@@ -61,29 +71,44 @@ export const POOL_4 = [
     [[1, 0], [1, 1], [1, 2], [0, 2]],
     [[0, 0], [1, 0], [2, 0], [0, 1]],
     [[0, 0], [1, 0], [2, 0], [2, 1]],
-    // Z & S shapes
+    // Mini Zig-Zag S & Z
     [[0, 0], [1, 0], [1, 1], [2, 1]],
     [[1, 0], [2, 0], [0, 1], [1, 1]],
     [[0, 0], [0, 1], [1, 1], [1, 2]],
-    [[1, 0], [0, 1], [1, 1], [0, 2]],
-    // 4-Lines
-    [[0, 0], [1, 0], [2, 0], [3, 0]],
-    [[0, 0], [0, 1], [0, 2], [0, 3]]
+    [[1, 0], [0, 1], [1, 1], [0, 2]]
 ];
 
-// 5-Cell (Unique Compact Patterns: Cross, Big Corner, U-shape, Big T, Stair)
-export const POOL_5 = [
-    // Cross / Plus
+export const POOL_4 = [...POOL_4_STARTING, ...POOL_4_SAVIOR];
+
+// 5-Cell: Savior Unique Compact Patterns
+export const POOL_5_SAVIOR = [
+    // Plus / Cross
     [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]],
-    // Big Corner
-    [[0, 0], [1, 0], [2, 0], [0, 1], [0, 2]],
-    // U-Shape
+    // U-Shapes (4 rotations)
     [[0, 0], [2, 0], [0, 1], [1, 1], [2, 1]],
-    // Big T
-    [[0, 0], [1, 0], [2, 0], [1, 1], [1, 2]],
-    // Stair / Diagonal
-    [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2]]
+    [[0, 0], [1, 0], [2, 0], [0, 1], [2, 1]],
+    [[0, 0], [0, 1], [0, 2], [1, 0], [1, 2]],
+    [[0, 0], [0, 2], [1, 0], [1, 1], [1, 2]],
+    // Mini Stair / Diagonal (2 rotations)
+    [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2]],
+    [[2, 0], [1, 0], [1, 1], [0, 1], [0, 2]]
 ];
+
+// 5-Cell & 9-Cell: Giant Blocks (STRICTLY LIMITED)
+export const POOL_5_GIANT = [
+    // 5-Lines
+    [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]],
+    [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
+    // Big 3x3 Corner
+    [[0, 0], [1, 0], [2, 0], [0, 1], [0, 2]],
+    [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]],
+    [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]],
+    [[2, 0], [2, 1], [2, 2], [0, 2], [1, 2]],
+    // 3x3 Solid Square (Giant 9-cell)
+    [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [0, 2], [1, 2], [2, 2]]
+];
+
+export const POOL_5 = [...POOL_5_SAVIOR, ...POOL_5_GIANT];
 
 export function normalizeShape(cells) {
     const minX = Math.min(...cells.map(([x]) => x));
