@@ -518,6 +518,11 @@ export class HubScene extends Phaser.Scene {
     }
 
     _buildStaticLayer() {
+        // Edge-fill for tall screens (logicH > 640): extend gradient edges
+        // Top edge: #EAF1FF (bgTop), Bottom edge: #FFFFFF (bgBottom)
+        this.add.rectangle(180, -200, 400, 400, 0xEAF1FF).setDepth(0);
+        this.add.rectangle(180, 840, 400, 400, 0xFFFFFF).setDepth(0);
+
         this.staticBgImage = this.add.image(180, 320, 'hub-static-bg')
             .setDisplaySize(360, 640)
             .setDepth(1);
