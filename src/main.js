@@ -22,8 +22,9 @@ const DPR = typeof window !== 'undefined'
 
 function computeLogicH() {
     if (typeof window === 'undefined') return 640;
-    const vpW = window.visualViewport?.width ?? window.innerWidth ?? 360;
-    const vpH = window.visualViewport?.height ?? window.innerHeight ?? 640;
+    const root = document.getElementById('game-root');
+    const vpW = root?.clientWidth || window.visualViewport?.width || window.innerWidth || 360;
+    const vpH = root?.clientHeight || window.visualViewport?.height || window.innerHeight || 640;
     if (vpW <= 0 || vpH <= 0) return 640;
     return Math.round(Math.min(Math.max(360 * vpH / vpW, 640), 800));
 }
