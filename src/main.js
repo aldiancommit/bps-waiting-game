@@ -66,19 +66,31 @@ const startGame = () => {
     const game = new Phaser.Game(config);
 
     // Sync body background + theme-color when a scene starts
-    const SCENE_COLORS = { HubScene: '#EAF1FF' };
-    const DEFAULT_COLOR = '#F1F5F9';
-    const themeMeta = document.querySelector('meta[name="theme-color"]');
-    const applyTheme = (key) => {
-        const color = SCENE_COLORS[key] || DEFAULT_COLOR;
-        document.body.style.backgroundColor = color;
-        if (themeMeta) themeMeta.setAttribute('content', color);
-    };
-    game.events.once(Phaser.Core.Events.READY, () => {
-        game.scene.scenes.forEach((s) => {
-            s.events.on(Phaser.Scenes.Events.CREATE, () => applyTheme(s.sys.settings.key));
+    try {
+        const SCENE_COLORS = { HubScene: '#EAF1FF' };
+        const DEFAULT_COLOR = '#F1F5F9';
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        const applyTheme = (key) => {
+            try {
+                const color = SCENE_COLORS[key] || DEFAULT_COLOR;
+                document.body.style.backgroundColor = color;
+                if (themeMeta) themeMeta.setAttribute('content', color);
+            } catch (err) {
+                console.warn('Theme hook apply error:', err);
+            }
+        };
+        game.events.once(Phaser.Core.Events.READY, () => {
+            try {
+                game.scene.scenes.forEach((s) => {
+                    s.events.on(Phaser.Scenes.Events.CREATE, () => applyTheme(s.sys.settings.key));
+                });
+            } catch (err) {
+                console.warn('Theme hook scene listener error:', err);
+            }
         });
-    });
+    } catch (err) {
+        console.warn('Theme hook setup error:', err);
+    }
 
     // Handle viewport resize (toolbar show/hide, rotation)
     let rafId = null;
