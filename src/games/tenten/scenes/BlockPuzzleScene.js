@@ -230,7 +230,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         // 6. Mahkota / Crown Icon (tengah)
         this.crownIcon = this.add.image(180, scoreY, 'mahkota')
-            .setScale(0.05)
+            .setDisplaySize(120, 72.2)
             .setOrigin(0.5, 0.4);
 
         // 7. Skor Terbaik Value (kanan-tengah) — Teks angka saja, jernih & tajam
@@ -604,31 +604,34 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     _shakeCrown(intensity = 'small') {
         this.tweens.killTweensOf(this.crownIcon);
-        this.crownIcon.setScale(0.05);
+        // Restore to display size (120×72.2) — scale depends on texture dimensions
+        this.crownIcon.setDisplaySize(120, 72.2);
+        const baseScaleX = this.crownIcon.scaleX;
+        const baseScaleY = this.crownIcon.scaleY;
         if (intensity === 'big') {
-            // Line clear / match: goyang gembira tetap konsisten di ukuran 0.05
+            // Line clear / match: goyang gembira
             this.tweens.add({
                 targets: this.crownIcon,
                 angle: { from: -10, to: 10 },
-                scaleX: 0.05, scaleY: 0.05,
+                scaleX: baseScaleX, scaleY: baseScaleY,
                 yoyo: true, repeat: 2, duration: 75,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
                     this.crownIcon.setAngle(0);
-                    this.crownIcon.setScale(0.05);
+                    this.crownIcon.setDisplaySize(120, 72.2);
                 }
             });
         } else {
-            // Place tanpa clear: goyang kecil tetap di ukuran 0.05
+            // Place tanpa clear: goyang kecil
             this.tweens.add({
                 targets: this.crownIcon,
                 angle: { from: -4, to: 4 },
-                scaleX: 0.05, scaleY: 0.05,
+                scaleX: baseScaleX, scaleY: baseScaleY,
                 yoyo: true, repeat: 1, duration: 60,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
                     this.crownIcon.setAngle(0);
-                    this.crownIcon.setScale(0.05);
+                    this.crownIcon.setDisplaySize(120, 72.2);
                 }
             });
         }
@@ -2178,16 +2181,19 @@ export class BlockPuzzleScene extends Phaser.Scene {
             this.highScore = this.score;
             saveHighScore(this.highScore);
 
-            // Efek: mahkota berkedip saat rekor terlampaui (tetap di ukuran 0.05)
+            // Efek: mahkota berkedip saat rekor terlampaui
+            this.crownIcon.setDisplaySize(120, 72.2);
+            const crownBaseX = this.crownIcon.scaleX;
+            const crownBaseY = this.crownIcon.scaleY;
             this.tweens.add({
                 targets: this.crownIcon,
                 angle: { from: -15, to: 15 },
-                scaleX: 0.05, scaleY: 0.05,
+                scaleX: crownBaseX, scaleY: crownBaseY,
                 yoyo: true, duration: 120, repeat: 2,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
                     this.crownIcon.setAngle(0);
-                    this.crownIcon.setScale(0.05);
+                    this.crownIcon.setDisplaySize(120, 72.2);
                 }
             });
         }
