@@ -355,7 +355,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
         triggerHaptic([40, 40, 80]);
 
         this.cameras.main.shake(200, 0.008);
-        this._floatText('🔥 FEVER MODE 2X! 🔥', 180, 240);
+        this._floatText('FEVER MODE 2X!', 180, 240);
         this._spawnConfetti();
 
         // Fiery pulsing board border
