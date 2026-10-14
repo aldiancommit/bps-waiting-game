@@ -4,6 +4,7 @@ import { HubScene } from './scenes/HubScene.js';
 import { BlockPuzzleScene } from './games/tenten/scenes/BlockPuzzleScene.js';
 import { LevelSelectScene } from './games/memory-angka/scenes/LevelSelectScene.js';
 import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
+import { sessionStore } from './SessionState.js';
 
 /**
  * BPS Waiting Game - Main Entry Point
@@ -82,7 +83,16 @@ const startGame = () => {
         game.events.once(Phaser.Core.Events.READY, () => {
             try {
                 game.scene.scenes.forEach((s) => {
-                    s.events.on(Phaser.Scenes.Events.CREATE, () => applyTheme(s.sys.settings.key));
+                    s.events.on(Phaser.Scenes.Events.CREATE, () => {
+                        applyTheme(s.sys.settings.key);
+                        try {
+                            let params = {};
+                            try { params = JSON.parse(JSON.stringify(s.sys.settings.data || {})); } catch {}
+                            sessionStore.setScene(s.scene.key, params);
+                        } catch (err) {
+                            console.warn('Session recording error:', err);
+                        }
+                    });
                 });
             } catch (err) {
                 console.warn('Theme hook scene listener error:', err);

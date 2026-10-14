@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { sessionStore } from '../SessionState.js';
 
 /**
  * OpeningScene - Splash Screen & Initial Game Asset Loader.
@@ -22,6 +23,15 @@ export class OpeningScene extends Phaser.Scene {
     }
 
     create() {
+        const s = sessionStore.getScene();
+        if (s) {
+            const targetScene = (s.scene === 'MemoryScene' && typeof s.params?.level !== 'number')
+                ? 'MemoryLevelSelectScene'
+                : s.scene;
+            this.scene.start(targetScene, s.params || {});
+            return;
+        }
+
         this.hasTransitioned = false;
         this.cameras.main.resetFX();
 
