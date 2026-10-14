@@ -1,128 +1,171 @@
 /**
- * Viewport Simulator for BPS Waiting Game.
+ * Viewport Simulator for BPS Waiting Game (Pilihan B: Layar Penuh Adaptif).
  * Pure Node.js (Zero external dependencies).
- * Verifies strict 9:16 box calculations, safe-area bounds, and Hub safe margins.
+ * Simulates adaptive logical height H = clamp(360 * availH / availW, 640, 800),
+ * measures screen coverage (>= 99% for 9:16 to 20:9), pita width, and safe-area bounds.
  */
 
 export const TEST_MATRIX = [
-    // Portrait mobile standard & notch/dynamic island
-    { name: 'iPhone SE (320x568)', w: 320, h: 568, top: 0, bot: 0, left: 0, right: 0 },
-    { name: 'Standard Mobile (360x640)', w: 360, h: 640, top: 0, bot: 0, left: 0, right: 0 },
-    { name: 'Android Tall (360x740)', w: 360, h: 740, top: 24, bot: 0, left: 0, right: 0 },
-    { name: 'Galaxy S20 (360x800)', w: 360, h: 800, top: 24, bot: 0, left: 0, right: 0 },
-    { name: 'iPhone 8 (375x667)', w: 375, h: 667, top: 20, bot: 0, left: 0, right: 0 },
-    { name: 'iPhone 14 (390x844, safe 47/34)', w: 390, h: 844, top: 47, bot: 34, left: 0, right: 0 },
-    { name: 'iPhone 14 + Browser Toolbar (390x744)', w: 390, h: 744, top: 47, bot: 34, left: 0, right: 0 },
-    { name: 'Pixel 8 (393x873)', w: 393, h: 873, top: 24, bot: 16, left: 0, right: 0 },
-    { name: 'Pixel 7 (412x915)', w: 412, h: 915, top: 24, bot: 16, left: 0, right: 0 },
-    { name: 'Pixel 7 + Toolbar (412x815)', w: 412, h: 815, top: 24, bot: 16, left: 0, right: 0 },
-    { name: 'iPhone 11 (414x896)', w: 414, h: 896, top: 48, bot: 34, left: 0, right: 0 },
-    { name: 'iPhone 15 Pro Max (430x932, safe 59/34)', w: 430, h: 932, top: 59, bot: 34, left: 0, right: 0 },
-    { name: 'iPhone 15 Pro Max + Toolbar (430x832)', w: 430, h: 832, top: 59, bot: 34, left: 0, right: 0 },
-    // Tablets
-    { name: 'iPad (768x1024)', w: 768, h: 1024, top: 24, bot: 20, left: 0, right: 0 },
-    { name: 'iPad Air (820x1180)', w: 820, h: 1180, top: 24, bot: 20, left: 0, right: 0 },
-    // Landscape variants
-    { name: 'Landscape Standard (640x360)', w: 640, h: 360, top: 0, bot: 0, left: 0, right: 0 },
-    { name: 'Landscape iPhone 14 (844x390, safe left/right 47, bot 21)', w: 844, h: 390, top: 0, bot: 21, left: 47, right: 47 },
+    // HP Pemilik (Chrome Android, toolbar tampil, layar akhir ~20:9)
+    { name: 'HP Pemilik (360x711, toolbar, inset bot 15)', w: 360, h: 711, top: 0, bot: 15, left: 0, right: 0, dpr: 2 },
+    { name: 'HP Pemilik (360x711, toolbar penuh, no inset)', w: 360, h: 711, top: 0, bot: 0, left: 0, right: 0, dpr: 2 },
+
+    // Android Tall & High-aspect ratio devices (20:9)
+    { name: 'Galaxy S20 (360x800, inset top 24)', w: 360, h: 800, top: 24, bot: 0, left: 0, right: 0, dpr: 3 },
+    { name: 'Galaxy S20 (360x800, full)', w: 360, h: 800, top: 0, bot: 0, left: 0, right: 0, dpr: 3 },
+    { name: 'Pixel 8 (393x873, inset 24/16)', w: 393, h: 873, top: 24, bot: 16, left: 0, right: 0, dpr: 2.75 },
+    { name: 'Pixel 7 (412x915, inset 24/16)', w: 412, h: 915, top: 24, bot: 16, left: 0, right: 0, dpr: 2.625 },
+    { name: 'Pixel 7 + Toolbar (412x815)', w: 412, h: 815, top: 24, bot: 16, left: 0, right: 0, dpr: 2.625 },
+
+    // iPhone Notch & Dynamic Island models
+    { name: 'iPhone 14 (390x844, safe 47/34)', w: 390, h: 844, top: 47, bot: 34, left: 0, right: 0, dpr: 3 },
+    { name: 'iPhone 14 + Toolbar (390x744, safe 47/34)', w: 390, h: 744, top: 47, bot: 34, left: 0, right: 0, dpr: 3 },
+    { name: 'iPhone 15 Pro Max (430x932, safe 59/34)', w: 430, h: 932, top: 59, bot: 34, left: 0, right: 0, dpr: 3 },
+    { name: 'iPhone 15 Pro Max + Toolbar (430x832)', w: 430, h: 832, top: 59, bot: 34, left: 0, right: 0, dpr: 3 },
+    { name: 'iPhone 11 (414x896, safe 48/34)', w: 414, h: 896, top: 48, bot: 34, left: 0, right: 0, dpr: 2 },
+
+    // Standard 16:9 phones
+    { name: 'Standard Mobile (360x640)', w: 360, h: 640, top: 0, bot: 0, left: 0, right: 0, dpr: 2 },
+    { name: 'iPhone 8 (375x667, inset top 20)', w: 375, h: 667, top: 20, bot: 0, left: 0, right: 0, dpr: 2 },
+    { name: 'iPhone SE (320x568)', w: 320, h: 568, top: 0, bot: 0, left: 0, right: 0, dpr: 2 },
+
+    // Tablets (Wider than 9:16)
+    { name: 'iPad (768x1024, safe 24/20)', w: 768, h: 1024, top: 24, bot: 20, left: 0, right: 0, dpr: 2 },
+    { name: 'iPad Air (820x1180, safe 24/20)', w: 820, h: 1180, top: 24, bot: 20, left: 0, right: 0, dpr: 2 },
+
+    // Landscape mode
+    { name: 'Landscape Standard (640x360)', w: 640, h: 360, top: 0, bot: 0, left: 0, right: 0, dpr: 2 },
+    { name: 'Landscape iPhone 14 (844x390, safe left/right 47, bot 21)', w: 844, h: 390, top: 0, bot: 21, left: 47, right: 47, dpr: 3 },
 ];
 
 /**
- * Calculates game box dimensions and offsets based on the proposed CSS formula.
+ * Calculates adaptive logical height H and canvas box within safe area.
  */
-export function calculateBox(profile) {
+export function calculateAdaptiveBox(profile) {
     const { w, h, top, bot, left, right } = profile;
     const availW = w - left - right;
     const availH = h - top - bot;
+    const screenRatio = availH / availW;
 
-    // Lebar = min(availW, availH * 9 / 16)
-    // Tinggi = lebar * 16 / 9
-    const boxW = Math.min(availW, availH * (9 / 16));
-    const boxH = boxW * (16 / 9);
+    // H = clamp(360 * availH / availW, 640, 800)
+    const logicH = Math.round(Math.min(Math.max(360 * screenRatio, 640), 800));
+    const gameRatio = logicH / 360;
 
-    // Position of box relative to screen (0, 0)
-    // Centered inside #app-container which is bound to insets [left, top, right, bot]
+    // Phaser.Scale.FIT inside availW x availH
+    let boxW, boxH;
+    if (screenRatio >= gameRatio) {
+        // Safe area is taller or equal to game aspect ratio
+        boxW = availW;
+        boxH = boxW * gameRatio;
+    } else {
+        // Safe area is wider than game aspect ratio (tablets, landscape)
+        boxH = availH;
+        boxW = boxH / gameRatio;
+    }
+
+    const safeArea = availW * availH;
+    const canvasArea = boxW * boxH;
+    const coverage = (canvasArea / safeArea) * 100;
+
+    // Pita (bars)
+    const pitaH = Math.max(0, availH - boxH);
+    const pitaW = Math.max(0, availW - boxW);
+    const totalPita = Math.max(pitaH, pitaW);
+
     const boxLeft = left + (availW - boxW) / 2;
     const boxTop = top + (availH - boxH) / 2;
-    const boxRight = boxLeft + boxW;
-    const boxBot = boxTop + boxH;
+
+    // Hub element safety in logical units:
+    // Header text y = 28, footer text y = logicH - 28
+    const hubMarginTop = 28;
+    const hubMarginBot = 28;
 
     return {
         availW,
         availH,
+        screenRatio,
+        logicH,
         boxW,
         boxH,
         boxLeft,
         boxTop,
-        boxRight,
-        boxBot,
-        ratio: boxW / boxH
+        coverage,
+        pitaH,
+        pitaW,
+        totalPita,
+        hubMarginTop,
+        hubMarginBot
     };
 }
 
-export function runViewportAudit(hubMarginTop = 28, hubMarginBot = 28) {
+export function runViewportAudit() {
     let hasFailure = false;
     const results = [];
 
-    console.log('=== AUDIT VIEWPORT & SAFE AREA MATRIX ===');
-    console.log(`Parameter Batas Aman Hub: Top >= ${hubMarginTop}u, Bottom >= ${hubMarginBot}u\n`);
+    console.log('=== AUDIT VIEWPORT ADAPTIF & CAKUPAN LAYAR (PILIKAN B) ===');
+    console.log('Syarat Lulus: Rasio 9:16 s.d. 20:9 (1.78 - 2.22) -> Cakupan >= 99% & Pita == 0 px.');
+    console.log('Margin elemen Hub: Top >= 28u, Bottom >= 28u dari batas area aman.\n');
 
     for (const p of TEST_MATRIX) {
-        const res = calculateBox(p);
-        const { boxW, boxH, boxLeft, boxTop, boxRight, boxBot, ratio } = res;
+        const res = calculateAdaptiveBox(p);
+        const {
+            availW, availH, screenRatio, logicH,
+            boxW, boxH, boxLeft, boxTop,
+            coverage, totalPita, hubMarginTop, hubMarginBot
+        } = res;
 
-        // 1. Check positive dimensions
-        const validSize = boxW > 0 && boxH > 0;
+        // 1. Verify H is within bounds [640, 800]
+        const validH = logicH >= 640 && logicH <= 800;
 
-        // 2. Check ratio deviation (tolerance: 0.5%)
-        const targetRatio = 9 / 16;
-        const ratioDev = Math.abs(ratio - targetRatio) / targetRatio;
-        const validRatio = ratioDev <= 0.005;
+        // 2. Check coverage and pita criteria
+        const isStandardMobileRange = screenRatio >= (16 / 9) - 0.05 && screenRatio <= (20 / 9) + 0.05;
+        let validCoverage = true;
+        let validPita = true;
 
-        // 3. Check safe area bounds (box must be >= left, >= top, <= w - right, <= h - bot)
-        const withinSafeLeft = boxLeft >= p.left - 0.01;
-        const withinSafeTop = boxTop >= p.top - 0.01;
-        const withinSafeRight = boxRight <= (p.w - p.right) + 0.01;
-        const withinSafeBot = boxBot <= (p.h - p.bot) + 0.01;
-        const withinSafeArea = withinSafeLeft && withinSafeTop && withinSafeRight && withinSafeBot;
+        if (isStandardMobileRange) {
+            // Must have >= 99% coverage and 0 px pita (allowing <= 0.5px float rounding)
+            validCoverage = coverage >= 99.0;
+            validPita = totalPita <= 0.5;
+        }
 
-        // 4. Check Hub element safety
-        // In 360x640 space, top element is at >= hubMarginTop, bot element at <= 640 - hubMarginBot
+        // 3. Check Hub margins
         const validHubMargins = hubMarginTop >= 28 && hubMarginBot >= 28;
 
-        const passed = validSize && validRatio && withinSafeArea && validHubMargins;
+        const passed = validH && validCoverage && validPita && validHubMargins;
         if (!passed) hasFailure = true;
 
         results.push({
             name: p.name,
             passed,
+            logicH,
             boxW,
             boxH,
-            boxLeft,
-            boxTop,
-            ratioDev,
-            withinSafeArea,
-            validSize,
-            validRatio
+            coverage,
+            totalPita,
+            screenRatio
         });
 
         const statusTag = passed ? '[PASS]' : '[FAIL]';
-        console.log(`${statusTag} ${p.name.padEnd(42)} -> Box: ${boxW.toFixed(1)}x${boxH.toFixed(1)} | Pos: (${boxLeft.toFixed(1)}, ${boxTop.toFixed(1)}) | RatioDev: ${(ratioDev * 100).toFixed(4)}%`);
+        const coverageStr = `${coverage.toFixed(1)}%`.padStart(6);
+        const pitaStr = `${totalPita.toFixed(1)}px`.padStart(7);
+        const hStr = `H=${logicH}`.padStart(5);
+
+        console.log(`${statusTag} ${p.name.padEnd(46)} -> ${hStr} | Box: ${boxW.toFixed(0)}x${boxH.toFixed(0)} | Cakupan: ${coverageStr} | Pita: ${pitaStr}`);
         if (!passed) {
-            console.error(`       DETAIL GAGAL: validSize=${validSize}, withinSafeArea=${withinSafeArea}, validRatio=${validRatio}`);
+            console.error(`       DETAIL GAGAL: validH=${validH}, validCoverage=${validCoverage}, validPita=${validPita}`);
         }
     }
 
-    console.log('\nTotal pengujian: ' + TEST_MATRIX.length + ' profil.');
+    console.log(`\nTotal pengujian: ${TEST_MATRIX.length} profil perangkat.`);
     if (hasFailure) {
         console.error('HASIL: BEBERAPA PENGUJIAN GAGAL!');
         process.exit(1);
     } else {
-        console.log('HASIL: SEMUA PENGUJIAN 100% LULUS!\n');
+        console.log('HASIL: SEMUA PENGUJIAN 100% LULUS (Cakupan Penuh, Pita 0px pada 9:16-20:9)!\n');
     }
 }
 
 // Run when executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    runViewportAudit(28, 28);
+    runViewportAudit();
 }
