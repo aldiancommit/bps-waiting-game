@@ -1,0 +1,7 @@
+{
+  "totalDistRawMaxBytes": 1650000,
+  "totalDistGzipMaxBytes": 530000,
+  "jsGzipMaxBytes": 395000,
+  "totalImagesMaxBytes": 61440,
+  "totalFontsMaxBytes": 92160
+}
