@@ -23,7 +23,7 @@
 - [x] Langkah 2: Modul SessionState + tes (9875429, 44af85f)
 - [x] Langkah 3: Navigasi skip opening saat refresh (2434a67)
 - [x] Langkah 4: Game state save/restore for Tenten (c8e0312)
-- [ ] Langkah 5: Game state save/restore for Memory Angka
+- [x] Langkah 5: Game state save/restore for Memory Angka (179f02e, 3caa94a)
 - [ ] Tests for save/restore
 
 ## Files Currently Being Edited
