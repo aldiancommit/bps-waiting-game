@@ -29,7 +29,7 @@ import {
 import { RetroAudio, triggerHaptic } from '../../../shared/Audio.js';
 import {
     getHighScore, saveHighScore,
-    clearGameState
+    saveGameState, loadGameState, clearGameState
 } from '../../../shared/Storage.js';
 
 export class BlockPuzzleScene extends Phaser.Scene {
@@ -112,8 +112,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this._setupInput();
         this._setupAutoPause();
 
-        clearGameState();
-        this.spawnSlotPieces();
+        const saved = loadGameState();
+        if (saved && Array.isArray(saved.board) && Array.isArray(saved.slotPieces)) {
+            this._restoreBoardState(saved);
+        } else {
+            clearGameState();
+            this.spawnSlotPieces();
+        }
         this._syncScoreUI();
     }
 
@@ -1029,6 +1034,53 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         if (this.slotPieces.every(piece => piece === null)) this.spawnSlotPieces();
 
+        this._checkGameOver();
+        if (!this.isGameOver) {
+            this._saveBoardState();
+        }
+    }
+
+    _saveBoardState() {
+        saveGameState({
+            board: this.board,
+            boardSprite: this.boardSprite,
+            boardSpecial: this.boardSpecial,
+            score: this.score,
+            comboStreak: this.comboStreak,
+            feverGauge: this.feverGauge,
+            isFeverActive: this.isFeverActive,
+            feverTurnsLeft: this.feverTurnsLeft,
+            slotPieces: this.slotPieces
+        });
+    }
+
+    _restoreBoardState(saved) {
+        this.board = saved.board;
+        this.boardSprite = saved.boardSprite || Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+        this.boardSpecial = saved.boardSpecial || Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+        this.score = typeof saved.score === 'number' ? saved.score : 0;
+        this.comboStreak = typeof saved.comboStreak === 'number' ? saved.comboStreak : 0;
+        this.feverGauge = typeof saved.feverGauge === 'number' ? saved.feverGauge : 0;
+        this.isFeverActive = Boolean(saved.isFeverActive);
+        this.feverTurnsLeft = typeof saved.feverTurnsLeft === 'number' ? saved.feverTurnsLeft : 0;
+        this._drawFeverBar();
+        this._renderBoardFills();
+        if (this.isFeverActive && this.feverAuraBorder) {
+            this.feverAuraBorder.clear().setVisible(true).setAlpha(0.85);
+            this.feverAuraBorder.lineStyle(4, 0xf59e0b, 0.85);
+            this.feverAuraBorder.strokeRoundedRect(BOARD_X - 4, BOARD_Y - 4, BOARD_W + 8, BOARD_H + 8, 8);
+            this.tweens.add({ targets: this.feverAuraBorder, alpha: { from: 0.95, to: 0.35 }, yoyo: true, repeat: -1, duration: 380, ease: 'Sine.easeInOut' });
+        }
+        this.slotPieces = saved.slotPieces;
+        for (let i = 0; i < 3; i++) {
+            const shape = this.slotPieces[i];
+            if (shape && shape.cells) {
+                const conf = SLOT_CONFIG[i];
+                const container = this._createPieceContainer(shape, SLOT_SCALE);
+                container.setPosition(conf.x, conf.y).setScale(SLOT_SCALE);
+                this.slotContainers[i] = container;
+            }
+        }
         this._checkGameOver();
     }
 
