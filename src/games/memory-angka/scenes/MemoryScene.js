@@ -1027,7 +1027,7 @@ export class MemoryScene extends Phaser.Scene {
         this.resScoreVal.setText(`${this.score}`);
 
         if (stars === 3) {
-            this.resSubtext.setText('Luar Biasa! 3 Bintang Sempurna! 🎉');
+            this.resSubtext.setText('Luar Biasa! 3 Bintang Sempurna!');
         } else if (stars === 2) {
             this.resSubtext.setText('Bagus! Selesai dengan 1 catatan.');
         } else {
