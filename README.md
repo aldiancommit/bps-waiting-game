@@ -1,6 +1,6 @@
-# Game Ruang Tunggu BPS (Offline Web Game Collection)
+# Ruang Game BPS (Web Mobile Game Collection)
 
-Koleksi game web ringan, 100% offline, dan responsif untuk pengunjung Ruang Pelayanan Statistik Terpadu (PST) kantor Badan Pusat Statistik (BPS).
+Koleksi game web ringan, hemat kuota (<500 KB transfer gzip pertama kali), dan responsif untuk pengunjung Ruang Pelayanan Statistik Terpadu (PST) kantor Badan Pusat Statistik (BPS). Setelah dimuat pertama kali, game berjalan sepenuhnya di sisi klien tanpa request jaringan lanjutan.
 
 ---
 
@@ -23,10 +23,13 @@ Koleksi game web ringan, 100% offline, dan responsif untuk pengunjung Ruang Pela
 src/
 ├── main.js                              # Hub Entry & Scene Configuration
 ├── scenes/
+│   ├── OpeningScene.js                  # Splash Screen & Asset Loader
 │   └── HubScene.js                      # Menu Utama Pilihan Game
 ├── shared/
 │   ├── Audio.js                         # 8-bit Retro WebAudio Synthesizer & Haptics
-│   └── Storage.js                       # LocalStorage Multi-Game Persistence
+│   ├── FontLoader.js                    # Robust Font Preload & Verification
+│   ├── Storage.js                       # LocalStorage Multi-Game Persistence
+│   └── Viewport.js                      # Dynamic Mobile Visual Viewport Manager
 └── games/
     ├── tenten/                          # Modul Game 1010 Match Color
     │   ├── data/BlockShapes.js
@@ -67,15 +70,19 @@ src/
 
 ---
 
-## 4. Menjalankan & Membangun Proyek
+## 4. Menjalankan, Membangun, & Menguji
 
 ```bash
 # Menjalankan server lokal pengembangan:
 npm run dev
 
-# Membangun bundle produksi offline (dist/):
+# Membangun bundle produksi (dist/):
 npm run build
 
-# Menjalankan unit test generator Memory Angka:
-node scratch/test_memory_generator.mjs
+# Menjalankan seluruh test suite unit & integritas:
+npm test
+
+# Menjalankan seluruh pemeriksaan audit (viewport, size budget, compat, logic):
+npm run audit:all
 ```
+

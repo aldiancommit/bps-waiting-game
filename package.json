@@ -1,21 +1,35 @@
 {
   "name": "bps_waiting_game",
   "version": "1.0.0",
-  "description": "",
+  "description": "Koleksi Game Santai Ruang Pelayanan Statistik Terpadu BPS",
   "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.mjs",
+    "predeploy": "npm run build && npm run audit:all",
+    "audit:size": "node scripts/audit/check-size.mjs",
+    "audit:compat": "node scripts/audit/check-compat.mjs",
+    "audit:viewport": "node scripts/audit/viewport-sim.mjs",
+    "audit:logic": "node --test tests/*.test.mjs",
+    "audit:all": "npm run audit:viewport && npm run audit:size && npm run audit:compat && npm run audit:logic"
   },
-  "keywords": [],
+  "keywords": [
+    "bps",
+    "phaser",
+    "games",
+    "offline-ready"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
-    "phaser": "^4.2.1"
+    "phaser": "4.2.1"
   },
   "devDependencies": {
-    "vite": "^8.3.1"
+    "vite": "8.3.1"
   }
 }
