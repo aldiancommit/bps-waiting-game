@@ -27,17 +27,16 @@ export class OpeningScene extends Phaser.Scene {
         const dpr = this.game.config.width / 360;
         const H = Math.round(this.game.config.height / dpr);
         this.cameras.main.setZoom(dpr);
-        this.cameras.main.centerOn(180, H / 2);
-        this.cameras.main.setBackgroundColor('#F1F5F9');
+        this.cameras.main.setBackgroundColor('#EAF1FF');
+        setSceneThemeColor('#EAF1FF', '#EAF1FF');
 
         if (this.textures.exists('opening-game-bps')) {
             this.textures.get('opening-game-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
         }
 
-        // Render opening image dalam mode cover (tanpa distorsi) menutup seluruh canvas
-        const coverScale = Math.max(360 / 360, H / 640);
+        // Tarik gambar opening agar mengisi penuh area pandang vertikal dan horizontal tanpa tercrop samping
         const splash = this.add.image(180, H / 2, 'opening-game-bps')
-            .setDisplaySize(360 * coverScale, 640 * coverScale)
+            .setDisplaySize(360, H)
             .setAlpha(0);
 
         // Smooth fade-in tween
@@ -73,8 +72,8 @@ export class OpeningScene extends Phaser.Scene {
         if (this.hasTransitioned) return;
         this.hasTransitioned = true;
 
-        // Smooth fade-out kamera menuju palette background menu (#F1F5F9)
-        this.cameras.main.fadeOut(380, 241, 245, 249);
+        // Smooth fade-out kamera menuju palette background menu (#EAF1FF)
+        this.cameras.main.fadeOut(380, 234, 241, 255);
         this.time.delayedCall(380, () => {
             this.scene.start('HubScene');
         });

@@ -34,30 +34,23 @@ const GAMES = [
 
 function getHubLayout(H) {
     const bannerH = 106;
-    const gapBannerSection = 20;
     const sectionH = 16;
-    const gapSectionCard = 14;
     const cardH = 96;
-    const gapCardCard = 16;
 
-    // Total height of the central block
-    const blockH = bannerH + gapBannerSection + sectionH + gapSectionCard + cardH + gapCardCard + cardH; // 368
-
-    // Available vertical space between header (ends ~66) and footer (starts ~H-36)
-    const headerBottom = 66;
-    const footerTop = H - 36;
-    const availH = footerTop - headerBottom;
-
-    // Center the block vertically
-    const blockTop = Math.round(headerBottom + Math.max(16, (availH - blockH) / 2));
-
-    const bannerY = blockTop;
+    // Adaptive vertical distribution pulling elements across H (640-820)
+    // Menghilangkan kesan tercrop dan space kosong di atas/bawah pada rasio tinggi (seperti Redmi Note 13 Pro ~20:9)
+    const progress = Math.max(0, Math.min(1, (H - 640) / 180));
+    const bannerY = Math.round(96 + 22 * progress);
+    const gapBannerSection = Math.round(22 + 16 * progress);
     const sectionY = bannerY + bannerH + gapBannerSection;
+    const gapSectionCard = Math.round(16 + 12 * progress);
     const card1Y = sectionY + sectionH + gapSectionCard;
+    const gapCardCard = Math.round(20 + 22 * progress);
     const card2Y = card1Y + cardH + gapCardCard;
     const footerY = H - 28;
 
     return {
+        progress,
         banner: { x: 16, y: bannerY, w: 328, h: bannerH, r: 24 },
         section: { y: sectionY + 12 },
         card: { x: 16, y: card1Y, w: 328, h: cardH, r: 24, pitch: cardH + gapCardCard, pad: 14 },
@@ -301,16 +294,18 @@ function drawStaticBackground(canvas, logoImage = null, dpr = 2, H = 640) {
     polyG.addColorStop(1, 'rgba(176,218,247,0.20)');
     fillPolygon(ctx, [[264, 15], [285, 0], [360, 0], [360, 88]], polyG);
 
-    const glowG = ctx.createRadialGradient(0, 218, 0, 0, 218, 110);
+    const glowY = Math.round(218 + 25 * layout.progress);
+    const glowG = ctx.createRadialGradient(0, glowY, 0, 0, glowY, 110);
     glowG.addColorStop(0, 'rgba(250,226,140,0.55)');
     glowG.addColorStop(1, 'rgba(250,226,140,0)');
     ctx.fillStyle = glowG;
-    ctx.fillRect(0, 110, 120, 220);
+    ctx.fillRect(0, glowY - 108, 120, 220);
 
-    const sunG = ctx.createRadialGradient(284, 265, 2, 290, 272, 20);
+    const sunY = Math.round(272 + 30 * layout.progress);
+    const sunG = ctx.createRadialGradient(284, sunY - 7, 2, 290, sunY, 20);
     sunG.addColorStop(0, '#FFF0A8');
     sunG.addColorStop(1, COLOR.yellow);
-    fillCircle(ctx, 290, 272, 19.5, sunG);
+    fillCircle(ctx, 290, sunY, 19.5, sunG);
 
     sparkle(ctx, 250, 64, 4.5, 'rgba(255,255,255,0.9)');
 
@@ -512,7 +507,7 @@ export class HubScene extends Phaser.Scene {
         this._buildStaticLayer(H);
         this._buildAudioButton();
         this._buildGameCards(H);
-        this._buildToast();
+        this._buildToast(H);
 
         // Viewport resize listener for rotation / dynamic toolbar changes
         this.game.events.on('viewport-resize', this._onViewportResize, this);
@@ -692,10 +687,14 @@ export class HubScene extends Phaser.Scene {
             if (this.cardSprites[i]) this.cardSprites[i].setPosition(180, cy);
             if (this.cardHitZones[i]) this.cardHitZones[i].setPosition(180, cy);
         });
+
+        if (this.toastContainer) {
+            this.toastContainer.setPosition(180, Math.round(H - 80));
+        }
     }
 
-    _buildToast() {
-        this.toastContainer = this.add.container(180, 520).setDepth(50).setVisible(false);
+    _buildToast(H = 640) {
+        this.toastContainer = this.add.container(180, Math.round(H - 80)).setDepth(50).setVisible(false);
         this.toastBg = this.add.graphics();
         this.toastContainer.add(this.toastBg);
 

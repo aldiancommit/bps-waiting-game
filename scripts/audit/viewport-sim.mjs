@@ -9,6 +9,8 @@ export const TEST_MATRIX = [
     // HP Pemilik (Chrome Android, toolbar tampil, layar akhir ~20:9)
     { name: 'HP Pemilik (360x711, toolbar, inset bot 15)', w: 360, h: 711, top: 0, bot: 15, left: 0, right: 0, dpr: 2 },
     { name: 'HP Pemilik (360x711, toolbar penuh, no inset)', w: 360, h: 711, top: 0, bot: 0, left: 0, right: 0, dpr: 2 },
+    { name: 'Redmi Note 13 Pro (393x873, no inset)', w: 393, h: 873, top: 0, bot: 0, left: 0, right: 0, dpr: 2.75 },
+    { name: 'Redmi Note 13 Pro + Insets (393x873, inset 32/16)', w: 393, h: 873, top: 32, bot: 16, left: 0, right: 0, dpr: 2.75 },
 
     // Android Tall & High-aspect ratio devices (20:9)
     { name: 'Galaxy S20 (360x800, inset top 24)', w: 360, h: 800, top: 24, bot: 0, left: 0, right: 0, dpr: 3 },
@@ -47,8 +49,8 @@ export function calculateAdaptiveBox(profile) {
     const availH = h - top - bot;
     const screenRatio = availH / availW;
 
-    // H = clamp(360 * availH / availW, 640, 800)
-    const logicH = Math.round(Math.min(Math.max(360 * screenRatio, 640), 800));
+    // H = clamp(360 * availH / availW, 640, 820)
+    const logicH = Math.round(Math.min(Math.max(360 * screenRatio, 640), 820));
     const gameRatio = logicH / 360;
 
     // Phaser.Scale.FIT inside availW x availH
@@ -114,8 +116,8 @@ export function runViewportAudit() {
             coverage, totalPita, hubMarginTop, hubMarginBot
         } = res;
 
-        // 1. Verify H is within bounds [640, 800]
-        const validH = logicH >= 640 && logicH <= 800;
+        // 1. Verify H is within bounds [640, 820]
+        const validH = logicH >= 640 && logicH <= 820;
 
         // 2. Check coverage and pita criteria
         const isStandardMobileRange = screenRatio >= (16 / 9) - 0.05 && screenRatio <= (20 / 9) + 0.05;
