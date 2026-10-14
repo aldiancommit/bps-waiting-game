@@ -41,8 +41,9 @@
 | **F-12** | **P3** | Phaser Bundle | [`package.json`](file:///home/geewonii/projects/game/bps-waiting-game/package.json) | Engine Phaser diimpor utuh (357 KB gz) termasuk modul physics 3D/tilemap yang tidak dipakai. | Rekomendasi P3: evaluasi custom build Phaser untuk memangkas bundle vendor. | **DEFERRED** |
 | **F-13** | **P0** | **UI / Viewport** | [`src/shared/Viewport.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/shared/Viewport.js), [`src/scenes/HubScene.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/scenes/HubScene.js) | **[TEMUAN HP PEMILIK]** Game berupa kotak 9:16 dipusatkan dengan pita biru muda (`#E8F2FC`) di atas (~57px) dan bawah (~87px). Dekorasi Hub terpotong lurus pada $y=640$. | Dirombak ke **Pilihan B (Adaptif)**: $H = \text{clamp}(360 \times \text{availH} / \text{availW}, 640, 800)$. Kanvas Hub mengisi seluruh $H$, gradien menyatu, blok tengah dipusatkan vertikal. Pita menjadi **0 px (100% cakupan)**. | **RESOLVED** |
 | **F-14** | **P1** | **Visual / Regresi** | [`src/games/tenten/scenes/BlockPuzzleScene.js:232`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/scenes/BlockPuzzleScene.js#L232) | **[TEMUAN HP PEMILIK]** Ikon mahkota menjadi sangat kecil (titik 6,4 px) karena kode memanggil `setScale(0.05)` pada tekstur baru 128x77. | Mengganti seluruh `setScale(0.05)` dengan `setDisplaySize(120, 72.2)` (ukuran tampil asli sebelum audit $2400 \times 0.05$). Ditambahkan unit test [`tests/asset-scales.test.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/tests/asset-scales.test.mjs). | **RESOLVED** |
-| **F-15** | **P1** | **Font / Tipografi** | [`src/games/tenten/utils/Constants.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/utils/Constants.js), [`src/games/memory-angka/data/Constants.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/memory-angka/data/Constants.js) | **[TEMUAN HP PEMILIK]** Teks di Tenten dan Memory Angka tampil tipis mirip Courier karena `Public Pixel` tidak ada dan fallback adalah `Courier New`. Teks Hub kurang tebal. | Hapus `Courier New` dari fallback; gunakan stack `'Public Pixel', monospace, sans-serif`; teks tebal di Hub memakai Poppins 700; pipeline `@font-face` siap menerima `.woff2` dan `.ttf`. Status: MENUNGGU FILE FONT. | **RESOLVED** |
+| **F-15** | **P1** | **Font / Tipografi** | [`src/games/tenten/utils/Constants.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/utils/Constants.js), [`src/games/memory-angka/data/Constants.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/memory-angka/data/Constants.js) | **[TEMUAN HP PEMILIK]** Teks di Tenten dan Memory Angka tampil tipis mirip Courier karena `Public Pixel` tidak ada dan fallback adalah `Courier New`. Teks Hub kurang tebal. | Hapus `Courier New` dari fallback; gunakan stack `'Public Pixel', monospace, sans-serif`; teks tebal di Hub memakai Poppins 700; pipeline `@font-face` siap menerima `.woff2` dan `.ttf`. Status: MENUNGGU FILE FONT (tidak ada font pengganti). | **RESOLVED** |
 | **F-16** | **P2** | **QA / Tooling** | [`scripts/audit/viewport-sim.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/scripts/audit/viewport-sim.mjs) | **[TEMUAN HP PEMILIK]** Simulator audit lama hanya mengecek kotak tidak keluar safe area (lulus dengan mengecilkan kotak), tidak mengukur sisa ruang kosong (pita). | Simulator dirombak mengukur cakupan layar ($\ge 99\%$) dan lebar pita ($0\text{px}$) pada rasio 9:16 s.d. 20:9. Profil HP pemilik 360x711 ditambahkan. Mengambil 12 screenshot Playwright di `docs/qa/`. | **RESOLVED** |
+| **F-17** | **P1** | **State / Navigasi** | [`src/SessionState.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/SessionState.js), [`src/scenes/OpeningScene.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/scenes/OpeningScene.js) | Saat peramban di-refresh, game mengulang dari OpeningScene dan progres permainan aktif hilang. | Modul SessionState (`sessionStorage`) menyimpan scene dan data permainan secara diam-diam. Refresh memulihkan scene terakhir dan status game (Tenten & Memory Angka) tanpa melalui Opening. Menutup tab tetap memulai dari Opening. | **RESOLVED** |
 
 ---
 
@@ -92,7 +93,7 @@ Margin elemen Hub: Top >= 28u, Bottom >= 28u dari batas area aman.
 [PASS] Landscape Standard (640x360)                   -> H=640 | Box: 203x360 | Cakupan:  31.6% | Pita: 437.5px (Pillarbox selaras)
 [PASS] Landscape iPhone 14 (844x390, safe 47/21)      -> H=640 | Box: 208x369 | Cakupan:  27.7% | Pita: 542.4px (Pillarbox selaras)
 
-Total pengujian: 19 profil perangkat | HASIL: 100% LULUS
+Total pengujian: 21 profil perangkat | HASIL: simulator: 21 profil lulus (model, bukan perangkat)
 ```
 
 ---
@@ -140,14 +141,34 @@ Buka URL `http://192.168.1.13:4173/` pada peramban Chrome di HP Anda (pastikan H
    - [ ] Apakah teks kartu Hub ("BLOCKS", "ANGKA", "PLAY") terbaca jelas dan tebal?
    - [ ] Catatan: Jika ingin font retro pixel milik Anda aktif, salin file font ke `public/fonts/PublicPixel.woff2` atau `public/fonts/PublicPixel.ttf` lalu jalankan kembali `npm run build`.
 
+### Status Pengujian: Terverifikasi vs Tidak Terverifikasi
+
+#### TERVERIFIKASI (Dibuktikan oleh Build & Skrip Otomatis):
+- **Build Produksi**: `npm run build` lulus tanpa error sintaks/chunk (Vite v8.3.1).
+- **Audit Skala Tekstur**: `node scripts/audit/audit-texture-scale.mjs` mengonfirmasi tidak ada `setScale()` liar pada mahkota (120x72.2), logo-bps, restart-icon, opening.
+- **Simulator Viewport Adaptif**: `node scripts/audit/viewport-sim.mjs` menghasilkan: simulator: 21 profil lulus (model, bukan perangkat).
+- **Unit Test Session State**: `node --test scripts/audit/session-state.test.mjs` (5 tes lulus: simpan/baca ulang, sanitasi JSON korup, versi, scene whitelist, throwing storage).
+- **Rantai Scene**: `grep -rn "key:\|scene.start" src/` mengonfirmasi urutan scene utuh: OpeningScene -> HubScene -> BlockPuzzleScene / MemoryLevelSelectScene -> MemoryScene.
+
+#### TIDAK TERVERIFIKASI (Belum Dapat Dibuktikan Tanpa Browser / HP Nyata):
+- **Tampilan di HP Fisik Nyata**: Area tampilan aktual pada peramban Chrome Android / Safari iOS.
+- **Perilaku Refresh di Browser**: Pemulihan diam-diam state scene & game saat pengguna menekan tombol refresh peramban.
+- **Dekorasi Hub di Tepi**: Apakah dekorasi Hub (segitiga hijau/biru, glow kuning) terlihat terpotong lurus di tepi atas/bawah pada HP fisik.
+- **Hook Theme-Color & Body Background**: Perubahan dinamis warna theme-color / latar peramban mobile.
+- **Audio Pasca-Refresh**: Perilaku audio/suara setelah refresh peramban (AudioContext auto-resume).
+
+### Pertanyaan Kritis untuk Pemilik Proyek:
+1. **Dekorasi Hub**: Apakah dekorasi Hub (segitiga hijau/biru, glow kuning) terlihat terpotong lurus di tepi atas/bawah pada layar HP Anda?
+2. **Restorasi State saat Refresh**: Saat Anda melakukan refresh di Hub, Tenten (setelah melangkah), dan Memory Angka (setelah menebak kartu), apakah permainan kembali ke posisi dan state terakhir tanpa mengulang Opening?
+
 ---
 
 ## 7. Keputusan Deployment & Langkah Pemilik Proyek
 
 > ### **STATUS: NO-GO SEMENTARA**
-> **Alasan**: Menunggu konfirmasi visual pemilik proyek di HP fisik Chrome Android via `http://192.168.1.13:4173/`. Setelah pemilik mengonfirmasi tampilan di HP sudah sempurna sesuai harapan, status dapat langsung diubah menjadi **GO** untuk deployment Vercel.
+> **Alasan**: Menunggu konfirmasi visual pemilik proyek di HP fisik Chrome Android via `http://<IP-LAN>:4173/`. Setelah pemilik mengonfirmasi tampilan di HP sudah sempurna sesuai harapan, status dapat langsung diubah menjadi **GO** untuk deployment Vercel.
 
 ### Ringkasan Tindakan untuk Pemilik Proyek:
-1. **Verifikasi HP Fisik**: Buka `http://192.168.1.13:4173/` di HP Anda untuk memastikan pita telah hilang dan mahkota berukuran proporsional.
-2. **Font Public Pixel (Opsional)**: Jika ingin font pixel resmi tampil di HP, salin file `PublicPixel.ttf` atau `PublicPixel.woff2` ke folder `public/fonts/`.
-3. **Deploy ke Vercel**: Setelah verifikasi visual disetujui, jalankan `git push origin main` untuk memicu rilis otomatis di Vercel.
+1. **Verifikasi HP Fisik**: Buka URL preview lokal di HP Anda untuk memastikan pita telah hilang, mahkota berukuran proporsional, dan dekorasi tampil baik.
+2. **Font Public Pixel (Opsional)**: Status saat ini: MENUNGGU FILE FONT (tidak ada font pengganti). Jika ingin font retro pixel resmi tampil di HP, salin file `PublicPixel.ttf` atau `PublicPixel.woff2` ke folder `public/fonts/`.
+3. **Deploy ke Vercel**: Setelah verifikasi visual disetujui, jalankan deployment ke Vercel.
