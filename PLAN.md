@@ -22,7 +22,8 @@
 - [x] Langkah 1: Pengaman hook main.js (try/catch theme-color & create hook)
 - [x] Langkah 2: Modul SessionState + tes (9875429, 44af85f)
 - [x] Langkah 3: Navigasi skip opening saat refresh (2434a67)
-- [ ] Game state save/restore for Tenten and Memory Angka
+- [x] Langkah 4: Game state save/restore for Tenten (c8e0312)
+- [ ] Langkah 5: Game state save/restore for Memory Angka
 - [ ] Tests for save/restore
 
 ## Files Currently Being Edited
