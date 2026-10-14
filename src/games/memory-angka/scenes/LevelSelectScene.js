@@ -73,7 +73,7 @@ export class LevelSelectScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '10px',
             color: '#1e293b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.backBtn.add(backArrow);
 
         const backHit = this.add.zone(0, 0, 34, 34).setInteractive({ useHandCursor: true });
@@ -135,7 +135,7 @@ export class LevelSelectScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '8.5px',
             color: '#b45309'
-        }).setOrigin(0.5).setResolution(4).setDepth(20);
+        }).setOrigin(0.5).setResolution(2).setDepth(20);
     }
 
     _drawAudioIcon() {
@@ -186,7 +186,7 @@ export class LevelSelectScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '7px',
             color: '#1e293b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         c.add(txt);
         c.txt = txt;
 
@@ -281,7 +281,7 @@ export class LevelSelectScene extends Phaser.Scene {
                 fontFamily: FONT_PIXEL,
                 fontSize: '11.5px',
                 color: C.SCORE_VAL
-            }).setOrigin(0.5).setResolution(4);
+            }).setOrigin(0.5).setResolution(2);
             c.add(lvlTxt);
 
             // Rule tag if DESC
@@ -290,7 +290,7 @@ export class LevelSelectScene extends Phaser.Scene {
                     fontFamily: FONT_PIXEL,
                     fontSize: '6.5px',
                     color: '#ea580c'
-                }).setOrigin(0.5).setResolution(4);
+                }).setOrigin(0.5).setResolution(2);
                 c.add(tag);
             }
 
@@ -301,7 +301,7 @@ export class LevelSelectScene extends Phaser.Scene {
                 fontFamily: FONT_PIXEL,
                 fontSize: '8px',
                 color: starColor
-            }).setOrigin(0.5).setResolution(4);
+            }).setOrigin(0.5).setResolution(2);
             c.add(st);
 
             // Interaction
@@ -342,7 +342,7 @@ export class LevelSelectScene extends Phaser.Scene {
                 fontFamily: FONT_PIXEL,
                 fontSize: '8px',
                 color: '#94a3b8'
-            }).setOrigin(0.5).setResolution(4);
+            }).setOrigin(0.5).setResolution(2);
             c.add(numTxt);
         }
 
@@ -370,7 +370,7 @@ export class LevelSelectScene extends Phaser.Scene {
                 fontFamily: FONT_PIXEL,
                 fontSize: '9.5px',
                 color: '#ffffff'
-            }).setOrigin(0.5).setResolution(4);
+            }).setOrigin(0.5).setResolution(2);
             this.endlessBtn.add(txt);
 
             const hit = this.add.zone(0, 0, btnW, btnH).setInteractive({ useHandCursor: true });
@@ -394,7 +394,7 @@ export class LevelSelectScene extends Phaser.Scene {
                 fontFamily: FONT_PIXEL,
                 fontSize: '8.5px',
                 color: '#64748b'
-            }).setOrigin(0.5).setResolution(4);
+            }).setOrigin(0.5).setResolution(2);
             this.endlessBtn.add(txt);
         }
 

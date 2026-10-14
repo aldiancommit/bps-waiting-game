@@ -210,7 +210,7 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '10px',
             color: C.SCORE_VAL
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.levelPill.add(this.levelText);
 
         // 2. Order Rule Badge (Tengah)
@@ -222,7 +222,7 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '8.5px',
             color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.ruleBadge.add(this.ruleText);
 
         // 3. Lives Container / Hearts (Kanan)
@@ -254,21 +254,21 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '8px',
             color: '#64748b'
-        }).setOrigin(0, 0.5).setResolution(4);
+        }).setOrigin(0, 0.5).setResolution(2);
         this.scoreContainer.add(this.scoreLabel);
 
         this.scoreValText = this.add.text(-95, 0, '0', {
             fontFamily: FONT_PIXEL,
             fontSize: '12.5px',
             color: C.SCORE_VAL
-        }).setOrigin(0, 0.5).setResolution(4);
+        }).setOrigin(0, 0.5).setResolution(2);
         this.scoreContainer.add(this.scoreValText);
 
         this.comboValText = this.add.text(145, 0, 'COMBO x1', {
             fontFamily: FONT_PIXEL,
             fontSize: '8.5px',
             color: '#b45309'
-        }).setOrigin(1, 0.5).setResolution(4);
+        }).setOrigin(1, 0.5).setResolution(2);
         this.scoreContainer.add(this.comboValText);
     }
 
@@ -312,18 +312,31 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '8px',
             color: '#64748b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.countdownContainer.add(this.phaseLabel);
     }
 
     _drawCountdownProgress(pct) {
-        this.countdownBarG.clear();
         const trackW = 324, trackH = 8;
         const trackX = -trackW / 2, trackY = -trackH / 2;
         const fillW = Math.max(0, (trackW - 2) * pct);
+        const color = pct > 0.3 ? 0x3b82f6 : 0xef4444;
 
+        if (
+            pct > 0 &&
+            pct < 1 &&
+            this._lastBarW !== undefined &&
+            Math.abs(fillW - this._lastBarW) < 0.5 &&
+            color === this._lastBarColor
+        ) {
+            return;
+        }
+
+        this._lastBarW = fillW;
+        this._lastBarColor = color;
+
+        this.countdownBarG.clear();
         if (fillW > 0) {
-            const color = pct > 0.3 ? 0x3b82f6 : 0xef4444;
             this.countdownBarG.fillStyle(color, 1);
             this.countdownBarG.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
         }
@@ -347,7 +360,7 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '10px',
             color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.readyBtn.add(readyTxt);
 
         const readyHit = this.add.zone(0, 0, 180, 44).setInteractive({ useHandCursor: true });
@@ -377,7 +390,7 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '10px',
             color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.peekBtn.add(this.peekText);
 
         const peekHit = this.add.zone(0, 0, 180, 44).setInteractive({ useHandCursor: true });
@@ -427,7 +440,7 @@ export class MemoryScene extends Phaser.Scene {
                 fontFamily: FONT_PIXEL,
                 fontSize: '20px',
                 color: '#ffffff'
-            }).setOrigin(0.5).setResolution(4);
+            }).setOrigin(0.5).setResolution(2);
             c.add(txt);
             c.txt = txt;
 
@@ -940,7 +953,7 @@ export class MemoryScene extends Phaser.Scene {
         // Title: LEVEL SELESAI
         this.resTitle = this.add.text(180, cardY + 28, 'LEVEL SELESAI!', {
             fontFamily: FONT_PIXEL, fontSize: '14px', color: '#16a34a'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.resultContainer.add(this.resTitle);
 
         // Stars Display
@@ -952,12 +965,12 @@ export class MemoryScene extends Phaser.Scene {
         // Score Label
         this.resScoreLabel = this.add.text(180, cardY + 98, 'SKOR ANDA', {
             fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#64748b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.resultContainer.add(this.resScoreLabel);
 
         this.resScoreVal = this.add.text(180, cardY + 124, '0', {
             fontFamily: FONT_PIXEL, fontSize: '23px', color: '#1e293b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.resultContainer.add(this.resScoreVal);
 
         // Mistakes & Hint info
@@ -975,7 +988,7 @@ export class MemoryScene extends Phaser.Scene {
 
         const btnNextTxt = this.add.text(180, btnNextY + btnH / 2, 'LANJUT LEVEL', {
             fontFamily: FONT_PIXEL, fontSize: '10px', color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.resultContainer.add(btnNextTxt);
 
         const nextHit = this.add.zone(180, btnNextY + btnH / 2, btnW, btnH).setInteractive({ useHandCursor: true });
@@ -995,7 +1008,7 @@ export class MemoryScene extends Phaser.Scene {
 
         const btnMenuTxt = this.add.text(180, btnMenuY + 16, 'PILIH LEVEL', {
             fontFamily: FONT_PIXEL, fontSize: '9px', color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.resultContainer.add(btnMenuTxt);
 
         const menuHit = this.add.zone(180, btnMenuY + 16, btnW, 32).setInteractive({ useHandCursor: true });
@@ -1041,7 +1054,7 @@ export class MemoryScene extends Phaser.Scene {
 
         const title = this.add.text(180, cardY + 28, 'NYAWA HABIS!', {
             fontFamily: FONT_PIXEL, fontSize: '14px', color: '#ef4444'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.gameOverContainer.add(title);
 
         const sub = this.add.text(180, cardY + 60, 'Jangan menyerah, coba lagi!', {
@@ -1052,12 +1065,12 @@ export class MemoryScene extends Phaser.Scene {
         // Score display
         const scLabel = this.add.text(180, cardY + 95, 'SKOR ANDA', {
             fontFamily: FONT_PIXEL, fontSize: '8.5px', color: '#64748b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.gameOverContainer.add(scLabel);
 
         this.goScoreVal = this.add.text(180, cardY + 120, '0', {
             fontFamily: FONT_PIXEL, fontSize: '22px', color: '#1e293b'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.gameOverContainer.add(this.goScoreVal);
 
         // Button: Ulang Level
@@ -1069,7 +1082,7 @@ export class MemoryScene extends Phaser.Scene {
 
         const retryTxt = this.add.text(180, btnRetryY + btnH / 2, 'ULANG LEVEL', {
             fontFamily: FONT_PIXEL, fontSize: '10px', color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.gameOverContainer.add(retryTxt);
 
         const retryHit = this.add.zone(180, btnRetryY + btnH / 2, btnW, btnH).setInteractive({ useHandCursor: true });
@@ -1089,7 +1102,7 @@ export class MemoryScene extends Phaser.Scene {
 
         const menuTxt = this.add.text(180, btnMenuY + 15, 'PILIH LEVEL', {
             fontFamily: FONT_PIXEL, fontSize: '9px', color: '#ffffff'
-        }).setOrigin(0.5).setResolution(4);
+        }).setOrigin(0.5).setResolution(2);
         this.gameOverContainer.add(menuTxt);
 
         const menuHit = this.add.zone(180, btnMenuY + 15, btnW, 30).setInteractive({ useHandCursor: true });
@@ -1304,7 +1317,7 @@ export class MemoryScene extends Phaser.Scene {
             fontFamily: FONT_PIXEL,
             fontSize: '8px',
             color: color
-        }).setOrigin(0.5).setResolution(4).setDepth(80);
+        }).setOrigin(0.5).setResolution(2).setDepth(80);
 
         this.tweens.add({
             targets: t,
