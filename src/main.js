@@ -8,14 +8,30 @@ import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
 /**
  * BPS Waiting Game - Main Entry Point
  * Opening Splash -> Multi-Game Hub (Tenten & Memory Angka)
+ *
+ * Adaptive Layout (Pilihan B):
+ *   logicW = 360 (fixed)
+ *   logicH = clamp(360 * viewportH / viewportW, 640, 800)
+ *   Game fills the entire safe area without letterboxing.
+ *   All UI stays centered at 360×640 via cameras.main.centerOn(180, 320).
  */
 
 const DPR = typeof window !== 'undefined'
     ? Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
     : 2;
 
-const GAME_WIDTH = 360 * DPR;
-const GAME_HEIGHT = 640 * DPR;
+function computeLogicH() {
+    if (typeof window === 'undefined') return 640;
+    const vpW = window.visualViewport?.width ?? window.innerWidth ?? 360;
+    const vpH = window.visualViewport?.height ?? window.innerHeight ?? 640;
+    if (vpW <= 0 || vpH <= 0) return 640;
+    return Math.round(Math.min(Math.max(360 * vpH / vpW, 640), 800));
+}
+
+const LOGIC_W = 360;
+const LOGIC_H = computeLogicH();
+const GAME_WIDTH = LOGIC_W * DPR;
+const GAME_HEIGHT = LOGIC_H * DPR;
 
 const config = {
     type: Phaser.AUTO,
@@ -46,7 +62,29 @@ const config = {
 const startGame = () => {
     if (window.__bpsGameStarted) return;
     window.__bpsGameStarted = true;
-    new Phaser.Game(config);
+    const game = new Phaser.Game(config);
+
+    // Handle viewport resize (toolbar show/hide, rotation)
+    let rafId = null;
+    let currentH = LOGIC_H;
+    const onResize = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+            const newH = computeLogicH();
+            if (Math.abs(newH - currentH) >= 2) {
+                currentH = newH;
+                game.scale.setGameSize(LOGIC_W * DPR, newH * DPR);
+                game.events.emit('viewport-resize', { logicW: LOGIC_W, logicH: newH, dpr: DPR });
+            }
+            game.scale.refresh();
+        });
+    };
+
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('orientationchange', onResize, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', onResize, { passive: true });
+    }
 };
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
