@@ -21,7 +21,7 @@
 ### MASALAH 3: Refresh browser resets to Opening
 - [x] Langkah 1: Pengaman hook main.js (try/catch theme-color & create hook)
 - [x] Langkah 2: Modul SessionState + tes (9875429, 44af85f)
-- [ ] Silent scene restore on refresh
+- [x] Langkah 3: Navigasi skip opening saat refresh (2434a67)
 - [ ] Game state save/restore for Tenten and Memory Angka
 - [ ] Tests for save/restore
 
