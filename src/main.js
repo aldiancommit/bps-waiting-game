@@ -4,6 +4,7 @@ import { HubScene } from './scenes/HubScene.js';
 import { BlockPuzzleScene } from './games/tenten/scenes/BlockPuzzleScene.js';
 import { LevelSelectScene } from './games/memory-angka/scenes/LevelSelectScene.js';
 import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
+import { initViewport } from './shared/Viewport.js';
 
 /**
  * BPS Waiting Game - Main Entry Point
@@ -11,7 +12,7 @@ import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
  */
 
 const DPR = typeof window !== 'undefined'
-    ? Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
+    ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 3)
     : 2;
 
 const GAME_WIDTH = 360 * DPR;
@@ -25,10 +26,10 @@ const config = {
     backgroundColor: '#F1F5F9',
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        autoCenter: Phaser.Scale.NO_CENTER,
         width: GAME_WIDTH,
         height: GAME_HEIGHT,
-        expandParent: true
+        expandParent: false
     },
     render: {
         antialias: true,
@@ -46,7 +47,8 @@ const config = {
 const startGame = () => {
     if (window.__bpsGameStarted) return;
     window.__bpsGameStarted = true;
-    new Phaser.Game(config);
+    const game = new Phaser.Game(config);
+    initViewport(game);
 };
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

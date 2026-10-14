@@ -17,8 +17,6 @@ export class OpeningScene extends Phaser.Scene {
 
         // Preload core assets for Main Menu (HubScene)
         this.load.image('logo-bps', 'assets/logo-bps.webp');
-        this.load.image('mahkota', 'assets/mahkota-icon.webp');
-        this.load.image('restart-icon', 'assets/restart-icon.webp');
     }
 
     create() {
