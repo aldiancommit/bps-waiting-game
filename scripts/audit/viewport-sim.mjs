@@ -49,8 +49,8 @@ export function calculateAdaptiveBox(profile) {
     const availH = h - top - bot;
     const screenRatio = availH / availW;
 
-    // H = clamp(360 * availH / availW, 640, 820)
-    const logicH = Math.round(Math.min(Math.max(360 * screenRatio, 640), 820));
+    // H = clamp(360 * availH / availW, 640, 800)
+    const logicH = Math.round(Math.min(Math.max(360 * screenRatio, 640), 800));
     const gameRatio = logicH / 360;
 
     // Phaser.Scale.FIT inside availW x availH
@@ -116,8 +116,8 @@ export function runViewportAudit() {
             coverage, totalPita, hubMarginTop, hubMarginBot
         } = res;
 
-        // 1. Verify H is within bounds [640, 820]
-        const validH = logicH >= 640 && logicH <= 820;
+        // 1. Verify H is within bounds [640, 800]
+        const validH = logicH >= 640 && logicH <= 800;
 
         // 2. Check coverage and pita criteria
         const isStandardMobileRange = screenRatio >= (16 / 9) - 0.05 && screenRatio <= (20 / 9) + 0.05;
