@@ -18,7 +18,7 @@ import { sessionStore } from './SessionState.js';
  */
 
 const DPR = typeof window !== 'undefined'
-    ? Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
+    ? Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2)
     : 2;
 
 function computeLogicH() {
@@ -50,7 +50,7 @@ const config = {
     },
     render: {
         antialias: true,
-        antialiasGL: true,
+        antialiasGL: false,
         pixelArt: false,
         roundPixels: false,
         powerPreference: 'high-performance'
@@ -105,11 +105,21 @@ const startGame = () => {
     // Handle viewport resize (toolbar show/hide, rotation)
     let rafId = null;
     let currentH = LOGIC_H;
+    let lastW = typeof window !== 'undefined' ? window.innerWidth : 360;
+    let lastH = typeof window !== 'undefined' ? window.innerHeight : 640;
     const onResize = () => {
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
+            const curW = window.innerWidth;
+            const curH = window.innerHeight;
             const newH = computeLogicH();
-            if (Math.abs(newH - currentH) >= 2) {
+            const hChanged = Math.abs(newH - currentH) >= 2;
+            const dimChanged = curW !== lastW || curH !== lastH;
+            if (!hChanged && !dimChanged) return;
+
+            lastW = curW;
+            lastH = curH;
+            if (hChanged) {
                 currentH = newH;
                 game.scale.setGameSize(LOGIC_W * DPR, newH * DPR);
                 game.events.emit('viewport-resize', { logicW: LOGIC_W, logicH: newH, dpr: DPR });
