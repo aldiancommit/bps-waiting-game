@@ -42,6 +42,7 @@ let totalBrotli = 0;
 let jsRaw = 0;
 let jsGzip = 0;
 let imagesRaw = 0;
+let gameAssetsRaw = 0;
 let fontsRaw = 0;
 
 for (const f of files) {
@@ -59,6 +60,9 @@ for (const f of files) {
         jsGzip += gz;
     } else if (f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.svg') || f.endsWith('.ico')) {
         imagesRaw += raw;
+        if (f.includes('dist/assets/')) {
+            gameAssetsRaw += raw;
+        }
     } else if (f.endsWith('.woff2') || f.endsWith('.woff') || f.endsWith('.ttf')) {
         fontsRaw += raw;
     }
@@ -68,7 +72,8 @@ console.log(`- Total Dist Raw    : ${totalRaw} B (${(totalRaw / 1024).toFixed(2)
 console.log(`- Total Dist Gzip   : ${totalGzip} B (${(totalGzip / 1024).toFixed(2)} KB) | Budget: <= ${budgets.totalDistGzipMaxBytes} B`);
 console.log(`- Total Dist Brotli : ${totalBrotli} B (${(totalBrotli / 1024).toFixed(2)} KB)`);
 console.log(`- JS Gzip           : ${jsGzip} B (${(jsGzip / 1024).toFixed(2)} KB) | Budget: <= ${budgets.jsGzipMaxBytes} B`);
-console.log(`- Total Images      : ${imagesRaw} B (${(imagesRaw / 1024).toFixed(2)} KB) | Budget: <= ${budgets.totalImagesMaxBytes} B (<= 60 KB)`);
+console.log(`- Game WebP Assets  : ${gameAssetsRaw} B (${(gameAssetsRaw / 1024).toFixed(2)} KB) | Budget: <= ${budgets.gameAssetsMaxBytes} B (<= 60 KB)`);
+console.log(`- Total Images (PWA): ${imagesRaw} B (${(imagesRaw / 1024).toFixed(2)} KB) | Budget: <= ${budgets.totalImagesMaxBytes} B (<= 80 KB)`);
 console.log(`- Total Fonts       : ${fontsRaw} B (${(fontsRaw / 1024).toFixed(2)} KB) | Budget: <= ${budgets.totalFontsMaxBytes} B (<= 90 KB)`);
 
 let failed = false;
@@ -83,6 +88,10 @@ if (totalGzip > budgets.totalDistGzipMaxBytes) {
 }
 if (jsGzip > budgets.jsGzipMaxBytes) {
     console.error(`[FAIL] JS Gzip (${jsGzip} B) melampaui batas (${budgets.jsGzipMaxBytes} B)!`);
+    failed = true;
+}
+if (budgets.gameAssetsMaxBytes && gameAssetsRaw > budgets.gameAssetsMaxBytes) {
+    console.error(`[FAIL] Aset WebP Game (${gameAssetsRaw} B) melampaui batas (${budgets.gameAssetsMaxBytes} B)!`);
     failed = true;
 }
 if (imagesRaw > budgets.totalImagesMaxBytes) {

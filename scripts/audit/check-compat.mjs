@@ -15,7 +15,7 @@ let failed = false;
 // 1. Run es-check
 try {
     console.log('[1/2] Menjalankan es-check es2021 pada dist/assets/*.js...');
-    const out = execSync('npx -y es-check es2021 "dist/assets/*.js"', { encoding: 'utf8' });
+    const out = execSync('npx -y es-check es2021 --module "dist/assets/*.js"', { encoding: 'utf8' });
     console.log(out.trim());
     console.log('[PASS] Bundle dist/ lolos uji sintaks ES2021 (kompatibel iOS 15 & Chrome 100).');
 } catch (err) {

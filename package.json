@@ -15,8 +15,11 @@
     "audit:size": "node scripts/audit/check-size.mjs",
     "audit:compat": "node scripts/audit/check-compat.mjs",
     "audit:viewport": "node scripts/audit/viewport-sim.mjs",
+    "audit:fonts": "node scripts/audit/check-fonts.mjs",
+    "audit:deps": "node scripts/audit/check-deps.mjs",
+    "audit:external": "node scripts/audit/check-external.mjs",
     "audit:logic": "node --test tests/*.test.mjs",
-    "audit:all": "npm run audit:viewport && npm run audit:size && npm run audit:compat && npm run audit:logic"
+    "audit:all": "npm run audit:viewport && npm run audit:size && npm run audit:compat && npm run audit:fonts && npm run audit:deps && npm run audit:external && npm run audit:logic"
   },
   "keywords": [
     "bps",

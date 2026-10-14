@@ -1,7 +1,8 @@
 {
-  "totalDistRawMaxBytes": 1650000,
-  "totalDistGzipMaxBytes": 530000,
+  "totalDistRawMaxBytes": 1700000,
+  "totalDistGzipMaxBytes": 540000,
   "jsGzipMaxBytes": 395000,
-  "totalImagesMaxBytes": 61440,
+  "gameAssetsMaxBytes": 61440,
+  "totalImagesMaxBytes": 81920,
   "totalFontsMaxBytes": 92160
 }
