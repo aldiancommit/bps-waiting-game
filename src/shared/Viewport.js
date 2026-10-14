@@ -17,8 +17,10 @@ export function computeLogicDimensions() {
     const vpW = appContainer?.clientWidth || window.innerWidth || 360;
     const vpH = appContainer?.clientHeight || window.visualViewport?.height || window.innerHeight || 640;
 
-    const ratio = vpH / vpW;
-    const logicH = Math.round(Math.min(Math.max(360 * ratio, 640), 820));
+    const ratio = (vpW > 0 && vpH > 0) ? (vpH / vpW) : (16 / 9);
+    const logicH = Number.isFinite(ratio)
+        ? Math.round(Math.min(Math.max(360 * ratio, 640), 820))
+        : 640;
 
     return { logicW: 360, logicH, dpr };
 }

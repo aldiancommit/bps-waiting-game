@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ensureFontsLoaded } from '../shared/FontLoader.js';
+import { setSceneThemeColor } from '../shared/Viewport.js';
 
 /**
  * OpeningScene - Splash Screen & Initial Game Asset Loader.
@@ -27,6 +28,7 @@ export class OpeningScene extends Phaser.Scene {
         const dpr = this.game.config.width / 360;
         const H = Math.round(this.game.config.height / dpr);
         this.cameras.main.setZoom(dpr);
+        this.cameras.main.centerOn(180, H / 2);
         this.cameras.main.setBackgroundColor('#EAF1FF');
         setSceneThemeColor('#EAF1FF', '#EAF1FF');
 
