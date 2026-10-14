@@ -39,18 +39,18 @@ export class BlockPuzzleScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('logo-bps', '/assets/logo-bps.webp');
-        this.load.image('mahkota', '/assets/mahkota-icon.webp');
-        this.load.image('restart-icon', '/assets/restart-icon.webp');
+        this.load.image('logo-bps', 'assets/logo-bps.webp');
+        this.load.image('mahkota', 'assets/mahkota-icon.webp');
+        this.load.image('restart-icon', 'assets/restart-icon.webp');
         
-        const kitPath = '/assets/block-puzzle-kit/addons/block_puzzle_kit/art/glossy/hd';
+        const kitPath = 'assets/block-puzzle-kit/addons/block_puzzle_kit/art/glossy/hd';
         this.load.image('kit-red', `${kitPath}/red.webp`);
         this.load.image('kit-blue', `${kitPath}/blue.webp`);
         this.load.image('kit-green', `${kitPath}/green.webp`);
         this.load.image('kit-yellow', `${kitPath}/yellow.webp`);
         this.load.image('kit-purple', `${kitPath}/purple.webp`);
         
-        const particlePath = '/assets/block-puzzle-kit/addons/block_puzzle_kit/art/particles';
+        const particlePath = 'assets/block-puzzle-kit/addons/block_puzzle_kit/art/particles';
         this.load.image('pt-sparkle', `${particlePath}/sparkle.webp`);
         this.load.image('pt-glow', `${particlePath}/glow.webp`);
     }
