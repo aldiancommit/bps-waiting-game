@@ -486,6 +486,12 @@ export class HubScene extends Phaser.Scene {
     }
 
     _generateTextures() {
+        const H = this.cameras.main.height || 640;
+        if (this.textures.exists('hub-static-bg') && HubScene._lastBakedH === H) {
+            return;
+        }
+        HubScene._lastBakedH = H;
+
         // 1. Static Layer Canvas Texture with loaded official BPS logo asset
         const bgCanvas = document.createElement('canvas');
         let logoImg = null;

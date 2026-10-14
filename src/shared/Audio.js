@@ -8,6 +8,9 @@ import { TENTEN_STORAGE_KEYS } from './Storage.js';
 
 export class RetroAudio {
     constructor() {
+        if (RetroAudio._instance) return RetroAudio._instance;
+        RetroAudio._instance = this;
+
         this.ctx = null;
         this.masterGain = null;
         this.noiseBuffer = null;
