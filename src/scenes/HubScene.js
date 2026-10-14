@@ -7,6 +7,7 @@
 
 import Phaser from 'phaser';
 import { RetroAudio, triggerHaptic } from '../shared/Audio.js';
+import { ensureFontsLoaded } from '../shared/FontLoader.js';
 
 /* ===== 1. KONFIGURASI (satuan desain standar 360 x 640) ===== */
 const DESIGN_W = 360;
@@ -470,7 +471,7 @@ export class HubScene extends Phaser.Scene {
             this.textures.get('logo-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
         }
 
-        await this._ensureFontsLoaded();
+        await ensureFontsLoaded(1500);
         this._generateTextures(dpr);
         this._buildStaticLayer();
         this._buildAudioButton();
@@ -479,18 +480,6 @@ export class HubScene extends Phaser.Scene {
 
         // Smooth fade-in
         this.cameras.main.fadeIn(200, 234, 241, 255);
-    }
-
-    async _ensureFontsLoaded() {
-        if (typeof document === 'undefined' || !document.fonts) return;
-        const fontChecks = [
-            document.fonts.load('400 12px "Poppins"'),
-            document.fonts.load('700 12px "Poppins"'),
-            document.fonts.load('400 12px "Inter"'),
-            document.fonts.load('700 12px "Inter"')
-        ];
-        const timeout = new Promise(resolve => setTimeout(resolve, 1200));
-        await Promise.race([Promise.allSettled(fontChecks), timeout]);
     }
 
     _generateTextures(dpr = 2) {

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ensureFontsLoaded } from '../shared/FontLoader.js';
 
 /**
  * OpeningScene - Splash Screen & Initial Game Asset Loader.
@@ -47,9 +48,7 @@ export class OpeningScene extends Phaser.Scene {
 
         // Tunggu hingga font dan seluruh aset siap, dengan durasi minimal opening
         const minDurationPromise = new Promise(resolve => this.time.delayedCall(1600, resolve));
-        const fontReadyPromise = (document.fonts && document.fonts.ready)
-            ? document.fonts.ready
-            : Promise.resolve();
+        const fontReadyPromise = ensureFontsLoaded(2000);
 
         // Otomatis transisi ke menu setelah semua siap dan durasi terpenuhi
         Promise.all([minDurationPromise, fontReadyPromise]).then(() => {
