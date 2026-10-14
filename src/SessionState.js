@@ -46,20 +46,17 @@ export function createSessionStore(storage) {
     return {
         setScene(sceneKey, params = {}) {
             if (!VALID_SCENES.includes(sceneKey)) return;
-            let safeParams = {};
-            try { safeParams = JSON.parse(JSON.stringify(params || {})); } catch {}
+            const safeParams = isObj(params) ? params : {};
             const rec = read() || { v: 1, scene: sceneKey, params: safeParams, games: {}, savedAt: Date.now() };
-            rec.scene = sceneKey; rec.params = isObj(safeParams) ? safeParams : {};
+            rec.scene = sceneKey; rec.params = safeParams;
             write(rec);
         },
         getScene() { const r = read(); return r ? { scene: r.scene, params: r.params || {} } : null; },
         setGame(id, state) {
             if (!id || typeof id !== 'string') return;
-            let safeState;
-            try { safeState = JSON.parse(JSON.stringify(state)); } catch { return; }
             const rec = read() || { v: 1, scene: 'HubScene', params: {}, games: {}, savedAt: Date.now() };
             rec.games = isObj(rec.games) ? rec.games : {};
-            rec.games[id] = safeState;
+            rec.games[id] = state;
             write(rec);
         },
         getGame(id) { const r = read(); return r?.games && id in r.games ? r.games[id] : null; },
