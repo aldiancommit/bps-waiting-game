@@ -61,11 +61,13 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.cameras.main.setZoom(dpr);
         this.cameras.main.centerOn(180, 320);
 
-        const maskG = this.make.graphics();
-        maskG.fillStyle(0xffffff, 1);
-        maskG.fillRoundedRect(0, 0, CELL_SIZE, CELL_SIZE, 5);
-        maskG.generateTexture('cell-mask', CELL_SIZE, CELL_SIZE);
-        maskG.destroy();
+        if (!this.textures.exists('cell-mask')) {
+            const maskG = this.make.graphics();
+            maskG.fillStyle(0xffffff, 1);
+            maskG.fillRoundedRect(0, 0, CELL_SIZE, CELL_SIZE, 5);
+            maskG.generateTexture('cell-mask', CELL_SIZE, CELL_SIZE);
+            maskG.destroy();
+        }
 
         // Enable crisp bilinear filter for high-res BPS logo to eliminate pixelated/blur artifacts
         if (this.textures.exists('logo-bps')) {
@@ -417,15 +419,31 @@ export class BlockPuzzleScene extends Phaser.Scene {
         this.add.existing(maskG);
         maskG.setAlpha(0);
         this.boardSpriteContainer.setMask(maskG.createGeometryMask());
+
+        // Pool matriks 10x10 objek Image untuk sprite papan
+        this.boardCellImages = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+            const row = [];
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const cx = GRID_START_X + c * GRID_STEP;
+                const cy = GRID_START_Y + r * GRID_STEP;
+                const img = this.add.image(cx, cy, 'cell-mask')
+                    .setOrigin(0, 0)
+                    .setDisplaySize(CELL_SIZE, CELL_SIZE)
+                    .setVisible(false);
+                this.boardSpriteContainer.add(img);
+                row.push(img);
+            }
+            this.boardCellImages.push(row);
+        }
     }
 
     _renderBoardFills() {
         this.boardFillGraphics.clear();
-        // Destroy old sprite images on board
-        this.boardSpriteContainer.removeAll(true);
 
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
+                const img = this.boardCellImages ? this.boardCellImages[r][c] : null;
                 const color = this.board[r][c];
                 if (color !== null) {
                     const x = GRID_START_X + c * GRID_STEP;
@@ -433,15 +451,26 @@ export class BlockPuzzleScene extends Phaser.Scene {
                     const special = this.boardSpecial[r][c];
 
                     if (special === 'rainbow') {
+                        if (img) img.setVisible(false);
                         this._drawPixelCell(this.boardFillGraphics, x, y, color, 1, 'rainbow');
                     } else if (special === 'bomb') {
+                        if (img) img.setVisible(false);
                         this._drawPixelCell(this.boardFillGraphics, x, y, color, 1, 'bomb');
                     } else if (this.boardSprite[r][c]) {
                         // Render as sprite cell from crop-blok
-                        this._drawSpriteBoardCell(x, y, this.boardSprite[r][c]);
+                        const spriteKey = this.boardSprite[r][c];
+                        if (img) {
+                            img.setTexture(spriteKey)
+                                .setPosition(x, y)
+                                .setDisplaySize(CELL_SIZE, CELL_SIZE)
+                                .setVisible(true);
+                        }
                     } else {
+                        if (img) img.setVisible(false);
                         this._drawPixelCell(this.boardFillGraphics, x, y, color, 1);
                     }
+                } else {
+                    if (img) img.setVisible(false);
                 }
             }
         }
