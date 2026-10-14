@@ -171,4 +171,21 @@ Buka URL `http://192.168.1.13:4173/` pada peramban Chrome di HP Anda (pastikan H
 ### Ringkasan Tindakan untuk Pemilik Proyek:
 1. **Verifikasi HP Fisik**: Buka URL preview lokal di HP Anda untuk memastikan pita telah hilang, mahkota berukuran proporsional, dan dekorasi tampil baik.
 2. **Font Public Pixel (Opsional)**: Status saat ini: MENUNGGU FILE FONT (tidak ada font pengganti). Jika ingin font retro pixel resmi tampil di HP, salin file `PublicPixel.ttf` atau `PublicPixel.woff2` ke folder `public/fonts/`.
-3. **Deploy ke Vercel**: Setelah verifikasi visual disetujui, jalankan deployment ke Vercel.
+3. **Deploy ke Vercel**: Ikuti panduan di [`docs/DEPLOY.md`](file:///home/geewonii/projects/game/bps-waiting-game/docs/DEPLOY.md) setelah verifikasi visual disetujui.
+
+---
+
+## 8. Kesiapan Deploy ke Vercel
+
+### TERVERIFIKASI (Dibuktikan oleh Perintah & Uji Lokal):
+- **Build Klon Bersih**: Kloning repo ke `/tmp/bps-clean` dan menjalankan `npm ci && npm run build` berhasil 100% (seluruh berkas ter-commit, `package-lock.json` sinkron).
+- **Predeploy Audit**: `npm run predeploy` lulus 100% (audit ukuran dist, kompatibilitas ES2021, font lokal, keamanan dependensi, URL eksternal, dan 9 tes unit logika/storage).
+- **Sintaks vercel.json Valid**: Validasi via `JSON.parse` lulus tanpa error, membatasi cache `immutable` hanya pada berkas berhash `/assets/(.+)\.(js|css)`.
+- **Smoke Test Lokal Produksi**: Server preview merespons HTTP 200 untuk `http://localhost:4173/` dan seluruh 7 berkas yang dirujuk `dist/index.html` (favicon, apple-touch-icon, manifest, font WOFF2, bundle JS/Phaser).
+- **Ukuran Dist**: Total direktori `dist/` berukuran 1.7M (raw) / 511.92 KB (gzip), berada di bawah batas anggaran produksi 540 KB.
+
+### TIDAK TERVERIFIKASI (Hanya Terbukti pada Deployment Nyata / Perangkat):
+- **Header di Server Vercel**: Penerapan header `Cache-Control: immutable` dan header keamanan (`X-Content-Type-Options`, `Referrer-Policy`) pada CDN Vercel.
+- **Perilaku di HP Nyata**: Render visual, tinggi adaptif, dan respons sentuhan pada peramban mobile fisik.
+- **Deployment Protection**: Perilaku fitur proteksi autentikasi preview bawaan pada dashboard Vercel.
+- **Domain**: Resolusi root domain dan routing domain akhir pada Vercel.
