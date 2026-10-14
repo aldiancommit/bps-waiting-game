@@ -766,6 +766,19 @@ export class MemoryScene extends Phaser.Scene {
             // Check if level completed
             if (this.targetIndex >= this.targetValues.length) {
                 this._handleLevelSuccess();
+            } else {
+                sessionStore.setGame('memory', {
+                    level: this.level,
+                    cards: this.layout.cells,
+                    flipped: [],
+                    matched: this.activeTiles.filter(t => t.isRevealed).map(t => t.val),
+                    moves: this.targetIndex + this.mistakesCount,
+                    elapsed: Math.round(performance.now() - this.guessStartTime),
+                    score: this.score,
+                    combo: this.combo,
+                    lives: this.lives,
+                    mistakesCount: this.mistakesCount
+                });
             }
 
         } else {
@@ -848,6 +861,7 @@ export class MemoryScene extends Phaser.Scene {
 
     _handleLevelSuccess() {
         this.gameState = 'RESULT';
+        sessionStore.clearGame('memory');
         const totalDuration = performance.now() - (this.guessStartTime || performance.now());
         const timeRatio = Math.min(1.0, totalDuration / (this.config.numCount * 2500));
 
@@ -889,6 +903,7 @@ export class MemoryScene extends Phaser.Scene {
 
     _handleGameOver() {
         this.gameState = 'GAMEOVER';
+        sessionStore.clearGame('memory');
 
         recordLevelAttempt({
             level: this.level,
@@ -1147,6 +1162,7 @@ export class MemoryScene extends Phaser.Scene {
 
         // 4. Keluar ke Menu Level Card (🚪/⬅)
         const exitCard = this._buildActionCard(col2X, row2Y, cardSize, 'exit', () => {
+            sessionStore.clearGame('memory');
             triggerHaptic(15);
             this.cameras.main.fadeOut(180, 241, 245, 249);
             this.time.delayedCall(180, () => {
