@@ -69,6 +69,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
             maskG.destroy();
         }
 
+        if (!this.textures.exists('px-particle')) {
+            const g = this.make.graphics({ add: false });
+            g.fillStyle(0xffffff, 1);
+            g.fillRect(0, 0, 8, 8);
+            g.generateTexture('px-particle', 8, 8);
+            g.destroy();
+        }
+
         // Enable crisp bilinear filter for high-res BPS logo to eliminate pixelated/blur artifacts
         if (this.textures.exists('logo-bps')) {
             this.textures.get('logo-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -1220,7 +1228,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this.particlePool = [];
         for (let i = 0; i < 60; i++) {
-            const p = this.add.graphics()
+            const p = this.add.image(0, 0, 'px-particle')
                 .setDepth(55)
                 .setVisible(false)
                 .setActive(false);
@@ -1229,7 +1237,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
         this.confettiPool = [];
         for (let i = 0; i < 40; i++) {
-            const c = this.add.graphics()
+            const c = this.add.image(0, 0, 'px-particle')
                 .setDepth(110)
                 .setVisible(false)
                 .setActive(false);
@@ -1242,14 +1250,16 @@ export class BlockPuzzleScene extends Phaser.Scene {
         for (let i = 0; i < 5; i++) {
             let p = this.particlePool.find(item => !item.active);
             if (!p) {
-                p = this.add.graphics().setDepth(55);
+                p = this.add.image(0, 0, 'px-particle').setDepth(55);
                 this.particlePool.push(p);
             }
             const sz = Phaser.Math.Between(3, 7);
-            p.clear();
-            p.fillStyle(Phaser.Utils.Array.GetRandom(blastColors), 1);
-            p.fillRect(-sz / 2, -sz / 2, sz, sz);
-            p.setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2).setAlpha(1).setScale(1).setVisible(true).setActive(true);
+            p.setTint(Phaser.Utils.Array.GetRandom(blastColors))
+                .setDisplaySize(sz, sz)
+                .setPosition(x + CELL_SIZE / 2, y + CELL_SIZE / 2)
+                .setAlpha(1)
+                .setVisible(true)
+                .setActive(true);
 
             const angle = Math.random() * Math.PI * 2;
             const dist = Phaser.Math.Between(20, 50);
@@ -1289,14 +1299,16 @@ export class BlockPuzzleScene extends Phaser.Scene {
         for (let i = 0; i < count; i++) {
             let particle = this.particlePool.find(p => !p.active);
             if (!particle) {
-                particle = this.add.graphics().setDepth(50);
+                particle = this.add.image(0, 0, 'px-particle').setDepth(50);
                 this.particlePool.push(particle);
             }
             const size = Phaser.Math.Between(2, 5);
-            particle.clear();
-            particle.fillStyle(pColor, 1);
-            particle.fillRect(-size / 2, -size / 2, size, size);
-            particle.setPosition(centerX, centerY).setAlpha(1).setScale(1).setVisible(true).setActive(true);
+            particle.setTint(pColor)
+                .setDisplaySize(size, size)
+                .setPosition(centerX, centerY)
+                .setAlpha(1)
+                .setVisible(true)
+                .setActive(true);
 
             const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
             const dist = Phaser.Math.Between(15, 35);
@@ -1485,7 +1497,8 @@ export class BlockPuzzleScene extends Phaser.Scene {
         });
 
         this._renderBoardFills();
-        clearedCells.forEach(([x, y, colorNum]) => this._spawnClearParticle(x, y, colorNum));
+        const particleCountPerCell = clearedCells.length > 10 ? 2 : 3;
+        clearedCells.forEach(([x, y, colorNum]) => this._spawnClearParticle(x, y, colorNum, particleCountPerCell));
 
         // Jika ada balok bom yang ikut terhapus atau tersenggol oleh match ini, ledakkan 3x3 berantai
         if (bombsTriggered.length > 0) {
@@ -1507,7 +1520,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
 
     // ── Partikel pixel saat baris/kolom bersih ───────────────
 
-    _spawnClearParticle(x, y, color) {
+    _spawnClearParticle(x, y, color, count = 3) {
         // Spawn glow from pool
         let glow = this.glowPool.find(g => !g.active);
         if (glow) {
@@ -1530,7 +1543,6 @@ export class BlockPuzzleScene extends Phaser.Scene {
         }
 
         // Spawn sparkles from pool
-        const count = 3;
         for (let i = 0; i < count; i++) {
             let p = this.sparklePool.find(s => !s.active);
             if (p) {
@@ -1939,15 +1951,16 @@ export class BlockPuzzleScene extends Phaser.Scene {
         for (let i = 0; i < 40; i++) {
             let p = this.confettiPool.find(item => !item.active);
             if (!p) {
-                p = this.add.graphics().setDepth(110);
+                p = this.add.image(0, 0, 'px-particle').setDepth(110);
                 this.confettiPool.push(p);
             }
             const sz = Phaser.Math.Between(3, 6);
-            p.clear();
-            p.fillStyle(Phaser.Utils.Array.GetRandom(colors), 1);
-            p.fillRect(0, 0, sz, sz);
-            p.setPosition(Phaser.Math.Between(30, 330), Phaser.Math.Between(-20, -60))
-                .setAlpha(1).setScale(1).setVisible(true).setActive(true);
+            p.setTint(Phaser.Utils.Array.GetRandom(colors))
+                .setDisplaySize(sz, sz)
+                .setPosition(Phaser.Math.Between(30, 330), Phaser.Math.Between(-20, -60))
+                .setAlpha(1)
+                .setVisible(true)
+                .setActive(true);
 
             this.tweens.killTweensOf(p);
             this.tweens.add({
