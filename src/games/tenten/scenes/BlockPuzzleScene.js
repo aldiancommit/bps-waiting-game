@@ -971,11 +971,6 @@ export class BlockPuzzleScene extends Phaser.Scene {
         });
 
         this._renderBoardFills();
-        
-        // Placement score with Fever multiplier
-        const basePlaceScore = shapeData.cells.length;
-        const placeScore = this.isFeverActive ? basePlaceScore * 2 : basePlaceScore;
-        this._addScore(placeScore);
 
         // Tactile micro-shake on placing piece
         this.cameras.main.shake(35, 0.0008);
@@ -2228,6 +2223,7 @@ export class BlockPuzzleScene extends Phaser.Scene {
     // ── Score & Persistence ─────────────────────────────────
 
     _addScore(points) {
+        if (!points || points <= 0) return;
         this.score += points;
         if (this.score > this.highScore) {
             this.highScore = this.score;
