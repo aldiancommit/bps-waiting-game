@@ -65,6 +65,21 @@ const startGame = () => {
     window.__bpsGameStarted = true;
     const game = new Phaser.Game(config);
 
+    // Sync body background + theme-color when a scene starts
+    const SCENE_COLORS = { HubScene: '#EAF1FF' };
+    const DEFAULT_COLOR = '#F1F5F9';
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const applyTheme = (key) => {
+        const color = SCENE_COLORS[key] || DEFAULT_COLOR;
+        document.body.style.backgroundColor = color;
+        if (themeMeta) themeMeta.setAttribute('content', color);
+    };
+    game.events.once(Phaser.Core.Events.READY, () => {
+        game.scene.scenes.forEach((s) => {
+            s.events.on(Phaser.Scenes.Events.CREATE, () => applyTheme(s.sys.settings.key));
+        });
+    });
+
     // Handle viewport resize (toolbar show/hide, rotation)
     let rafId = null;
     let currentH = LOGIC_H;
