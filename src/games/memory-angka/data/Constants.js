@@ -8,8 +8,8 @@ export const DPR = typeof window !== 'undefined'
     ? Math.min(window.devicePixelRatio || 1, 3)
     : 1;
 
-export const FONT_PIXEL = "'Public Pixel', monospace, sans-serif";
-export const FONT_UI = "'Poppins', system-ui, -apple-system, sans-serif";
+export const FONT_PIXEL = "'Public Pixel', sans-serif";
+export const FONT_UI = "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 // Layout & Grid Bounds (360x640)
 export const BOARD_AREA = {

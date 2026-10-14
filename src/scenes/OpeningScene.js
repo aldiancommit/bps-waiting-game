@@ -1,6 +1,4 @@
 import Phaser from 'phaser';
-import { ensureFontsLoaded } from '../shared/FontLoader.js';
-import { setSceneThemeColor } from '../shared/Viewport.js';
 
 /**
  * OpeningScene - Splash Screen & Initial Game Asset Loader.
@@ -19,6 +17,8 @@ export class OpeningScene extends Phaser.Scene {
 
         // Preload core assets for Main Menu (HubScene)
         this.load.image('logo-bps', 'assets/logo-bps.webp');
+        this.load.image('mahkota', 'assets/mahkota-icon.webp');
+        this.load.image('restart-icon', 'assets/restart-icon.webp');
     }
 
     create() {
@@ -26,19 +26,17 @@ export class OpeningScene extends Phaser.Scene {
         this.cameras.main.resetFX();
 
         const dpr = this.game.config.width / 360;
-        const H = Math.round(this.game.config.height / dpr);
         this.cameras.main.setZoom(dpr);
-        this.cameras.main.centerOn(180, H / 2);
-        this.cameras.main.setBackgroundColor('#EAF1FF');
-        setSceneThemeColor('#EAF1FF', '#EAF1FF');
+        this.cameras.main.centerOn(180, 320);
+        this.cameras.main.setBackgroundColor('#F1F5F9');
 
         if (this.textures.exists('opening-game-bps')) {
             this.textures.get('opening-game-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
         }
 
-        // Tarik gambar opening agar mengisi penuh area pandang vertikal dan horizontal tanpa tercrop samping
-        const splash = this.add.image(180, H / 2, 'opening-game-bps')
-            .setDisplaySize(360, H)
+        // Render opening image dengan ukuran sama persis seperti main menu (360x640) tanpa ada yang terpotong
+        const splash = this.add.image(180, 320, 'opening-game-bps')
+            .setDisplaySize(360, 640)
             .setAlpha(0);
 
         // Smooth fade-in tween
@@ -51,7 +49,9 @@ export class OpeningScene extends Phaser.Scene {
 
         // Tunggu hingga font dan seluruh aset siap, dengan durasi minimal opening
         const minDurationPromise = new Promise(resolve => this.time.delayedCall(1600, resolve));
-        const fontReadyPromise = ensureFontsLoaded(2000);
+        const fontReadyPromise = (document.fonts && document.fonts.ready)
+            ? document.fonts.ready
+            : Promise.resolve();
 
         // Otomatis transisi ke menu setelah semua siap dan durasi terpenuhi
         Promise.all([minDurationPromise, fontReadyPromise]).then(() => {
@@ -74,8 +74,8 @@ export class OpeningScene extends Phaser.Scene {
         if (this.hasTransitioned) return;
         this.hasTransitioned = true;
 
-        // Smooth fade-out kamera menuju palette background menu (#EAF1FF)
-        this.cameras.main.fadeOut(380, 234, 241, 255);
+        // Smooth fade-out kamera menuju palette background menu (#F1F5F9)
+        this.cameras.main.fadeOut(380, 241, 245, 249);
         this.time.delayedCall(380, () => {
             this.scene.start('HubScene');
         });

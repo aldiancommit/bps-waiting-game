@@ -1,23 +1,23 @@
 /**
  * Multi-Game Hub Scene for BPS Waiting Game.
  * Exact Slicing Implementation of "Ruang Game BPS - Menu"
- * Pixel typography on Play buttons, game titles (TENTEN/BLOCKS/MEMORY/ANGKA),
- * and section header. Bold Poppins 700 for subtitles and footer.
- * Fully adaptive logical height (640-800) with zero clipping and zero contrasting bars.
+ * Pixel typography on Play buttons and game titles (BLOCKS & ANGKA)
+ * Reuses official BPS logo asset with 100% offline, High-DPI crisp Canvas textures.
  */
 
 import Phaser from 'phaser';
 import { RetroAudio, triggerHaptic } from '../shared/Audio.js';
-import { ensureFontsLoaded } from '../shared/FontLoader.js';
-import { setSceneThemeColor } from '../shared/Viewport.js';
 
-/* ===== 1. KONFIGURASI ===== */
-const DESIGN_W = 360;
+/* ===== 1. KONFIGURASI (satuan desain, lebar 391) ===== */
+const DESIGN_W = 391;
+const DESIGN_H = 695.11; // 391 / (9/16)
+const ASPECT = 9 / 16;
 
-const FONT_PIXEL = "'Public Pixel', monospace, sans-serif";
-const FONT_HUB = "'Poppins', system-ui, -apple-system, sans-serif";
-const fd = (w, s) => `${w} ${s}px ${FONT_HUB}`;
-const fb = (w, s) => `${w} ${s}px ${FONT_HUB}`;
+const FONT_PIXEL = "'Public Pixel', sans-serif";
+const DISPLAY = "'Fredoka','Baloo 2','Nunito',ui-rounded,system-ui,sans-serif";
+const BODY = "'Nunito','Fredoka',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+const fd = (w, s) => `${w} ${s}px ${DISPLAY}`;
+const fb = (w, s) => `${w} ${s}px ${BODY}`;
 
 const COLOR = {
     bgTop: '#EAF1FF', bgBottom: '#FFFFFF',
@@ -32,293 +32,240 @@ const GAMES = [
     { id: 'memory-angka', name: 'Memory Angka',  eyebrow: 'MEMORY', title: 'ANGKA',  desc: 'Ingat urutan angka', icon: 'memory' },
 ];
 
-function getHubLayout(H) {
-    const bannerH = 106;
-    const sectionH = 16;
-    const cardH = 96;
+const LAYOUT = {
+    banner:  { x: 14, y: 144, w: 360, h: 110, r: 30 },
+    section: { y: 316 },
+    card:    { x: 14, y: 356, w: 360, h: 96, r: 28, pitch: 126, pad: 18 },
+    icon:    { size: 62 },
+    text:    { dx: 98, eyebrowDy: 31, titleDy: 52, descDy: 70 },
+    button:  { w: 96, h: 34 },
+};
 
-    // Adaptive vertical distribution pulling elements across H (640-820)
-    // Menghilangkan kesan tercrop dan space kosong di atas/bawah pada rasio tinggi (seperti Redmi Note 13 Pro ~20:9)
-    const progress = Math.max(0, Math.min(1, (H - 640) / 180));
-    const bannerY = Math.round(96 + 22 * progress);
-    const gapBannerSection = Math.round(22 + 16 * progress);
-    const sectionY = bannerY + bannerH + gapBannerSection;
-    const gapSectionCard = Math.round(16 + 12 * progress);
-    const card1Y = sectionY + sectionH + gapSectionCard;
-    const gapCardCard = Math.round(20 + 22 * progress);
-    const card2Y = card1Y + cardH + gapCardCard;
-    const footerY = H - 28;
-
-    return {
-        progress,
-        banner: { x: 16, y: bannerY, w: 328, h: bannerH, r: 24 },
-        section: { y: sectionY + 12 },
-        card: { x: 16, y: card1Y, w: 328, h: cardH, r: 24, pitch: cardH + gapCardCard, pad: 14 },
-        card1Y,
-        card2Y,
-        icon: { size: 56 },
-        text: { dx: 86, eyebrowDy: 28, titleDy: 50, descDy: 72 },
-        button: { w: 76, h: 36 },
-        footer: { y: footerY }
-    };
-}
-
-/* ===== 2. CANVAS DRAWING HELPERS ===== */
+/* ===== 2. HELPER GAMBAR VECTOR ===== */
 function roundRectPath(ctx, x, y, w, h, r) {
-    const radius = Math.min(r, w / 2, h / 2);
+    r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + w - radius, y);
-    ctx.arcTo(x + w, y, x + w, y + radius, radius);
-    ctx.lineTo(x + w, y + h - radius);
-    ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius);
-    ctx.lineTo(x + radius, y + h);
-    ctx.arcTo(x, y + h, x, y + h - radius, radius);
-    ctx.lineTo(x, y + radius);
-    ctx.arcTo(x, y, x + radius, y, radius);
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
 }
 
-function fillRoundRect(ctx, x, y, w, h, r, fillStyle, shadow = null) {
+function fillRoundRect(ctx, x, y, w, h, r, fill, shadow) {
     ctx.save();
     if (shadow) {
-        ctx.shadowColor = shadow.color || 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = shadow.blur || 8;
-        ctx.shadowOffsetX = shadow.dx || 0;
-        ctx.shadowOffsetY = shadow.dy || 3;
+        ctx.shadowColor = shadow.color;
+        ctx.shadowBlur = shadow.blur;
+        ctx.shadowOffsetY = shadow.dy;
     }
-    ctx.fillStyle = fillStyle;
+    ctx.fillStyle = fill;
     roundRectPath(ctx, x, y, w, h, r);
     ctx.fill();
     ctx.restore();
 }
 
-function fillCircle(ctx, cx, cy, r, fillStyle) {
-    ctx.save();
-    ctx.fillStyle = fillStyle;
+function fillPolygon(ctx, pts, fill) {
+    ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-}
-
-function fillPolygon(ctx, points, fillStyle) {
-    if (points.length === 0) return;
-    ctx.save();
-    ctx.fillStyle = fillStyle;
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i][0], points[i][1]);
-    }
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
     ctx.closePath();
     ctx.fill();
-    ctx.restore();
 }
 
-function drawText(ctx, text, x, y, opts = {}) {
-    ctx.save();
-    if (opts.font) ctx.font = opts.font;
-    if (opts.color) ctx.fillStyle = opts.color;
-    ctx.textAlign = opts.align || 'left';
-    ctx.textBaseline = opts.baseline || 'alphabetic';
-
-    if (opts.shadow) {
-        ctx.shadowColor = opts.shadow.color || 'rgba(0,0,0,0.15)';
-        ctx.shadowBlur = opts.shadow.blur || 4;
-        ctx.shadowOffsetX = opts.shadow.dx || 0;
-        ctx.shadowOffsetY = opts.shadow.dy || 2;
-    }
-
-    if (Array.isArray(text)) {
-        let curX = x;
-        text.forEach((part) => {
-            ctx.save();
-            if (part.font) ctx.font = part.font;
-            if (part.color) ctx.fillStyle = part.color;
-            ctx.fillText(part.text, curX, y);
-            curX += ctx.measureText(part.text).width + (part.spacing || 0);
-            ctx.restore();
-        });
-    } else {
-        ctx.fillText(text, Math.round(x), Math.round(y));
-    }
-    ctx.restore();
-}
-
-function measure(ctx, text, font) {
-    ctx.save();
-    ctx.font = font;
-    const m = ctx.measureText(text).width;
-    ctx.restore();
-    return m;
-}
-
-function sparkle(ctx, x, y, size, color) {
-    ctx.save();
-    ctx.fillStyle = color;
+function fillCircle(ctx, x, y, r, fill) {
+    ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.moveTo(x, y - size);
-    ctx.quadraticCurveTo(x, y, x + size, y);
-    ctx.quadraticCurveTo(x, y, x, y + size);
-    ctx.quadraticCurveTo(x, y, x - size, y);
-    ctx.quadraticCurveTo(x, y, x, y - size);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
 }
 
-function miniBlock(ctx, x, y, size, angle, color) {
+function sparkle(ctx, x, y, r, fill) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.quadraticCurveTo(x, y, x, y + r);
+    ctx.quadraticCurveTo(x, y, x - r, y);
+    ctx.quadraticCurveTo(x, y, x, y - r);
+    ctx.fill();
+}
+
+function miniBlock(ctx, x, y, s, rot, fill) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
-    roundRectPath(ctx, -size / 2, -size / 2, size, size, 2.5);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.rotate(rot);
+    fillRoundRect(ctx, -s / 2, -s / 2, s, s, s * 0.3, fill, { color: 'rgba(0,40,100,0.22)', blur: 4, dy: 2 });
     ctx.restore();
 }
 
-function drawGamepad(ctx, cx, cy) {
+function drawText(ctx, runs, x, y, { font: f, color = '#000', spacing = 0, align = 'left', shadow } = {}) {
+    const list = typeof runs === 'string' ? [{ text: runs }] : runs;
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(-0.1);
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    roundRectPath(ctx, -24, -13, 48, 26, 8);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(-17, -2, 10, 4);
-    ctx.fillRect(-14, -5, 4, 10);
-    fillCircle(ctx, 10, -3, 2.4, '#F7D96B');
-    fillCircle(ctx, 16, 2, 2.4, '#4BD08B');
-    fillCircle(ctx, 8, 4, 2.2, '#FF9A4A');
-    fillCircle(ctx, 13, -6, 2, '#6EE7B7');
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    if (shadow) {
+        ctx.shadowColor = shadow.color;
+        ctx.shadowBlur = shadow.blur;
+        ctx.shadowOffsetY = shadow.dy;
+    }
+    const width = (run) => {
+        ctx.font = run.font || f;
+        return spacing
+            ? [...run.text].reduce((s, ch) => s + ctx.measureText(ch).width + spacing, 0)
+            : ctx.measureText(run.text).width;
+    };
+    const total = list.reduce((s, r) => s + width(r), 0) - (spacing || 0);
+    let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+    for (const run of list) {
+        ctx.font = run.font || f;
+        ctx.fillStyle = run.color || color;
+        if (!spacing) {
+            ctx.fillText(run.text, cx, y);
+            cx += ctx.measureText(run.text).width;
+        } else {
+            for (const ch of run.text) {
+                ctx.fillText(ch, cx, y);
+                cx += ctx.measureText(ch).width + spacing;
+            }
+        }
+    }
+    ctx.restore();
+}
+
+function measure(ctx, text, f) {
+    ctx.save();
+    ctx.font = f;
+    const w = ctx.measureText(text).width;
+    ctx.restore();
+    return w;
+}
+
+function drawGamepad(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.14);
+    const body = ctx.createLinearGradient(0, -17, 0, 17);
+    body.addColorStop(0, '#FFFFFF');
+    body.addColorStop(1, '#CFE4F6');
+    fillRoundRect(ctx, -26, -22, 16, 7, 3.5, 'rgba(255,255,255,0.75)');
+    fillRoundRect(ctx, 10, -22, 16, 7, 3.5, 'rgba(255,255,255,0.75)');
+    fillRoundRect(ctx, -33, -17, 66, 34, 17, body, { color: 'rgba(0,50,110,0.35)', blur: 9, dy: 6 });
+    fillRoundRect(ctx, -25, -2.4, 12, 4.8, 2, COLOR.navyIcon);
+    fillRoundRect(ctx, -21.4, -6, 4.8, 12, 2, COLOR.navyIcon);
+    fillCircle(ctx, 19, -6, 3.5, '#F0731A');
+    fillCircle(ctx, 25, 0, 3.5, '#1FA35B');
+    fillCircle(ctx, 19, 6, 3.5, '#0992DE');
+    fillCircle(ctx, 13, 0, 3.5, '#F7C948');
+    fillRoundRect(ctx, -6, 0, 5, 2.6, 1.3, '#9DB4CC');
+    fillRoundRect(ctx, 1, 0, 5, 2.6, 1.3, '#9DB4CC');
     ctx.restore();
 }
 
 const ICONS = {
     tenten(ctx) {
-        ctx.save();
-        ctx.fillStyle = '#E8F5FD';
-        roundRectPath(ctx, 0, 0, 56, 56, 16);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(9,146,222,0.15)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        const colors = ['#22C55E', '#0992DE', '#E77F28', '#F59E0B'];
-        const coords = [
-            { x: 12, y: 12, c: 0 },
-            { x: 28, y: 12, c: 1 },
-            { x: 12, y: 28, c: 2 },
-            { x: 28, y: 28, c: 3 },
-            { x: 38, y: 38, c: 1, sz: 8 }
+        const size = 15.5, pitch = 19.4, x0 = 5.5, y0 = 5.7, r = 6;
+        const grid = [
+            ['#12326F', '#12326F', '#F5781F'],
+            ['#1A5BA3', '#2AA876', '#F5781F'],
+            ['#1A5BA3', '#2AA876', null],
         ];
-
-        coords.forEach(b => {
-            const sz = b.sz || 15;
-            ctx.fillStyle = colors[b.c];
-            roundRectPath(ctx, b.x, b.y, sz, sz, 4);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            roundRectPath(ctx, b.x + 1.5, b.y + 1.5, sz - 3, sz / 2 - 1.5, 2);
-            ctx.fill();
-        });
-        ctx.restore();
+        grid.forEach((row, ry) => row.forEach((color, cx) => {
+            if (!color) return;
+            const x = x0 + cx * pitch, y = y0 + ry * pitch;
+            fillRoundRect(ctx, x, y, size, size, r, color, { color: 'rgba(18,50,111,0.25)', blur: 4, dy: 2 });
+            fillRoundRect(ctx, x + 1.8, y + 1.5, size - 3.6, size * 0.38, r * 0.55, 'rgba(255,255,255,0.26)');
+        }));
+        fillCircle(ctx, 56.7, 53.7, 5.9, '#F5781F');
+        fillCircle(ctx, 55, 51.9, 1.8, 'rgba(255,255,255,0.55)');
     },
-
     memory(ctx) {
-        ctx.save();
-        ctx.fillStyle = '#FEF3E8';
-        roundRectPath(ctx, 0, 0, 56, 56, 16);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(231,127,40,0.15)';
-        ctx.lineWidth = 1;
+        const g = ctx.createLinearGradient(0, 0, 61, 62);
+        g.addColorStop(0, '#2457B8');
+        g.addColorStop(1, '#0E2A66');
+        fillRoundRect(ctx, 0, 0, 61.3, 61.7, 22, g, { color: 'rgba(18,50,111,0.30)', blur: 8, dy: 4 });
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 1.2;
+        roundRectPath(ctx, 0.6, 0.6, 60.1, 60.5, 21.4);
         ctx.stroke();
-
-        const bubbles = [
-            { x: 17, y: 17, r: 10, n: '1', c: '#E77F28' },
-            { x: 38, y: 20, r: 8.5, n: '2', c: '#0992DE' },
-            { x: 23, y: 39, r: 9, n: '3', c: '#22C55E' },
-            { x: 42, y: 40, r: 7.5, n: '4', c: '#F59E0B' },
-        ];
-
-        bubbles.forEach(b => {
-            ctx.fillStyle = b.c;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 4.6;
+        ctx.strokeStyle = '#C3CCE0';
+        ctx.beginPath();
+        ctx.moveTo(22.2, 39);
+        ctx.lineTo(32.2, 49);
+        ctx.moveTo(38, 23.2);
+        ctx.lineTo(48.3, 32);
+        ctx.stroke();
+        [
+            { n: '1', x: 13.8, y: 46, color: '#F2701F' },
+            { n: '2', x: 30.8, y: 30.3, color: '#27A55F' },
+            { n: '3', x: 48.3, y: 15.2, color: '#F2701F' },
+        ].forEach((b) => {
+            fillCircle(ctx, b.x, b.y, 7.2, b.color);
+            ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+            ctx.lineWidth = 1.1;
             ctx.beginPath();
-            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, 6.5, 0, Math.PI * 2);
+            ctx.arc(b.x, b.y, 7.2, 0, 6.283);
             ctx.stroke();
-            drawText(ctx, b.n, b.x, b.y + 3, { font: '700 9px "Poppins", sans-serif', color: COLOR.white, align: 'center' });
+            drawText(ctx, b.n, b.x, b.y + 3.6, { font: fd(700, 10), color: COLOR.white, align: 'center' });
         });
-        ctx.restore();
     },
 };
 
 /* ===== 3. RENDER GENERATORS ===== */
-function drawStaticBackground(canvas, logoImage = null, dpr = 2, H = 640) {
+function drawStaticBackground(canvas, logoImage = null) {
     const ctx = canvas.getContext('2d');
     const w = DESIGN_W;
-    const h = H;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    ctx.scale(dpr, dpr);
+    const h = DESIGN_H;
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    ctx.scale(2, 2);
 
-    const layout = getHubLayout(h);
-
-    // 1. Background Gradient spanning full height H
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#EAF1FF');
-    g.addColorStop(0.30, '#E1EDF8');
-    g.addColorStop(0.65, '#D4E5F5');
-    g.addColorStop(1, '#C7DCF1');
-    ctx.fillStyle = g;
+    // 1. Background
+    ctx.fillStyle = COLOR.bgBottom;
     ctx.fillRect(0, 0, w, h);
+    const g = ctx.createLinearGradient(0, 0, 0, 340);
+    g.addColorStop(0, COLOR.bgTop);
+    g.addColorStop(1, COLOR.bgBottom);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, 340);
 
-    // 2. Atmosphere Decorations (smooth gradients, no sharp edges)
-    let polyG = ctx.createLinearGradient(0, 0, 0, 110);
-    polyG.addColorStop(0, 'rgba(190,236,170,0.85)');
-    polyG.addColorStop(1, 'rgba(204,238,190,0.20)');
-    fillPolygon(ctx, [[98, 0], [202, 0], [208, 109]], polyG);
+    // 2. Atmosphere Decorations
+    let polyG = ctx.createLinearGradient(0, 0, 0, 120);
+    polyG.addColorStop(0, 'rgba(190,236,170,0.9)');
+    polyG.addColorStop(1, 'rgba(204,238,190,0.25)');
+    fillPolygon(ctx, [[107, 0], [219, 0], [226, 119]], polyG);
 
-    polyG = ctx.createLinearGradient(0, 0, 0, 92);
-    polyG.addColorStop(0, 'rgba(160,210,248,0.85)');
-    polyG.addColorStop(1, 'rgba(176,218,247,0.20)');
-    fillPolygon(ctx, [[264, 15], [285, 0], [360, 0], [360, 88]], polyG);
+    polyG = ctx.createLinearGradient(0, 0, 0, 100);
+    polyG.addColorStop(0, 'rgba(160,210,248,0.9)');
+    polyG.addColorStop(1, 'rgba(176,218,247,0.25)');
+    fillPolygon(ctx, [[287, 16], [310, 0], [391, 0], [391, 96]], polyG);
 
-    const glowY = Math.round(218 + 25 * layout.progress);
-    const glowG = ctx.createRadialGradient(0, glowY, 0, 0, glowY, 110);
-    glowG.addColorStop(0, 'rgba(250,226,140,0.55)');
+    const glowG = ctx.createRadialGradient(0, 238, 0, 0, 238, 110);
+    glowG.addColorStop(0, 'rgba(250,226,140,0.6)');
     glowG.addColorStop(1, 'rgba(250,226,140,0)');
     ctx.fillStyle = glowG;
-    ctx.fillRect(0, glowY - 108, 120, 220);
+    ctx.fillRect(0, 120, 120, 240);
 
-    const sunY = Math.round(272 + 30 * layout.progress);
-    const sunG = ctx.createRadialGradient(284, sunY - 7, 2, 290, sunY, 20);
+    const sunG = ctx.createRadialGradient(309, 289, 2, 315.5, 296, 22);
     sunG.addColorStop(0, '#FFF0A8');
     sunG.addColorStop(1, COLOR.yellow);
-    fillCircle(ctx, 290, sunY, 19.5, sunG);
+    fillCircle(ctx, 315.5, 296, 21.5, sunG);
 
-    sparkle(ctx, 250, 64, 4.5, 'rgba(255,255,255,0.9)');
+    sparkle(ctx, 272, 70, 5, 'rgba(255,255,255,0.9)');
 
-    // 3. Header: BPS Official Asset Logo & Title (Batas aman atas >= 28px)
-    const headerY = 28;
+    // 3. Header: BPS Official Asset Logo & Title
     if (logoImage) {
-        ctx.drawImage(logoImage, 20, headerY, 44, 34);
+        ctx.drawImage(logoImage, 28, 22, 46, 36);
     }
-    drawText(ctx, 'BPS', 72, headerY + 18, { font: '700 22px "Poppins", sans-serif', color: COLOR.navy });
-    drawText(ctx, 'Badan Pusat Statistik', 72, headerY + 32, { font: '700 10px "Poppins", sans-serif', color: '#2A5478', spacing: 0.4 });
+    drawText(ctx, 'BPS', 84, 41, { font: fd(700, 24), color: COLOR.navy });
+    drawText(ctx, 'Badan Pusat Statistik', 84, 55, { font: fb(700, 10.5), color: '#2A5478', spacing: 0.5 });
 
-    // 4. Banner (Centered vertically inside central block)
-    const b = layout.banner;
+    // 4. Banner
+    const b = LAYOUT.banner;
     const bgG = ctx.createLinearGradient(b.x, b.y, b.x + b.w, b.y + b.h);
     bgG.addColorStop(0, '#2CB9F7');
     bgG.addColorStop(0.55, '#0992DE');
@@ -328,77 +275,109 @@ function drawStaticBackground(canvas, logoImage = null, dpr = 2, H = 640) {
     ctx.save();
     roundRectPath(ctx, b.x, b.y, b.w, b.h, b.r);
     ctx.clip();
-    fillCircle(ctx, b.x + b.w - 7, b.y - 11, 66, 'rgba(255,255,255,0.10)');
-    fillCircle(ctx, b.x + b.w - 48, b.y + b.h + 15, 53, 'rgba(255,255,255,0.08)');
-    fillCircle(ctx, b.x - 5, b.y + b.h - 4, 38, 'rgba(255,255,255,0.07)');
-    const sh = ctx.createLinearGradient(0, b.y, 0, b.y + 48);
+    fillCircle(ctx, b.x + b.w - 8, b.y - 12, 72, 'rgba(255,255,255,0.10)');
+    fillCircle(ctx, b.x + b.w - 52, b.y + b.h + 16, 58, 'rgba(255,255,255,0.08)');
+    fillCircle(ctx, b.x - 6, b.y + b.h - 4, 42, 'rgba(255,255,255,0.07)');
+    const sh = ctx.createLinearGradient(0, b.y, 0, b.y + 52);
     sh.addColorStop(0, 'rgba(255,255,255,0.22)');
     sh.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = sh;
-    ctx.fillRect(b.x, b.y, b.w, 48);
+    ctx.fillRect(b.x, b.y, b.w, 52);
     ctx.restore();
 
     ctx.strokeStyle = 'rgba(255,255,255,0.36)';
-    ctx.lineWidth = 1.1;
-    roundRectPath(ctx, b.x + 0.5, b.y + 0.5, b.w - 1.1, b.h - 1.1, b.r - 0.5);
+    ctx.lineWidth = 1.2;
+    roundRectPath(ctx, b.x + 0.6, b.y + 0.6, b.w - 1.2, b.h - 1.2, b.r - 0.6);
     ctx.stroke();
 
-    sparkle(ctx, b.x + 191, b.y + 24, 4.5, 'rgba(255,255,255,0.9)');
-    sparkle(ctx, b.x + 248, b.y + 15, 3.2, 'rgba(255,243,176,0.95)');
-    sparkle(ctx, b.x + 172, b.y + 57, 2.8, 'rgba(255,255,255,0.85)');
-    miniBlock(ctx, b.x + 213, b.y + 42, 8.2, 0.4, '#F7D96B');
-    miniBlock(ctx, b.x + 233, b.y + 58, 6.4, -0.3, '#4BD08B');
-    miniBlock(ctx, b.x + 307, b.y + 14, 7.3, 0.5, '#FF9A4A');
-    drawGamepad(ctx, b.x + 282, b.y + 42);
+    sparkle(ctx, 226, 170, 5, 'rgba(255,255,255,0.9)');
+    sparkle(ctx, 288, 160, 3.5, 'rgba(255,243,176,0.95)');
+    sparkle(ctx, 205, 206, 3, 'rgba(255,255,255,0.85)');
+    miniBlock(ctx, 250, 190, 9, 0.4, '#F7D96B');
+    miniBlock(ctx, 272, 208, 7, -0.3, '#4BD08B');
+    miniBlock(ctx, 352, 160, 8, 0.5, '#FF9A4A');
+    drawGamepad(ctx, 326, 191);
 
     const sh2 = { color: 'rgba(0,45,110,0.28)', blur: 5, dy: 2.5 };
-    drawText(ctx, 'Ruang', b.x + 20, b.y + 36, { font: '700 30px "Poppins", sans-serif', color: COLOR.white, shadow: sh2 });
+    drawText(ctx, 'Ruang', 45, 184, { font: fd(700, 35), color: COLOR.white, shadow: sh2 });
     drawText(ctx, [
-        { text: 'Game ', color: COLOR.white, font: '700 20px "Poppins", sans-serif' },
-        { text: 'BP', color: COLOR.white, font: '700 22px "Poppins", sans-serif' },
-        { text: 'S', color: COLOR.yellowHighlight, font: '700 22px "Poppins", sans-serif' },
-    ], b.x + 22, b.y + 58, { shadow: sh2 });
-    drawText(ctx, 'Sambil menunggu panggilan data, yuk mainkan game ringan', b.x + 22, b.y + 77,
-        { font: '700 9px "Poppins", sans-serif', color: 'rgba(255,255,255,0.95)' });
-    drawText(ctx, 'berikut!', b.x + 22, b.y + 88, { font: '700 9px "Poppins", sans-serif', color: 'rgba(255,255,255,0.95)' });
+        { text: 'Game ', color: COLOR.white, font: fd(600, 22) },
+        { text: 'BP', color: COLOR.white, font: fd(700, 25) },
+        { text: 'S', color: COLOR.yellowHighlight, font: fd(700, 25) },
+    ], 48, 209, { shadow: sh2 });
+    drawText(ctx, 'Sambil menunggu panggilan data, yuk mainkan game ringan', 48, 229.5,
+        { font: fb(800, 9), color: 'rgba(255,255,255,0.95)' });
+    drawText(ctx, 'berikut!', 48, 241, { font: fb(800, 9), color: 'rgba(255,255,255,0.95)' });
 
-    // 5. Section Title: "Pilih Game Favoritemu !" (Public Pixel)
-    ctx.font = `10px ${FONT_PIXEL}`;
+    // 5. Section Title
+    ctx.font = fd(700, 20);
     const str1 = 'Pilih Game ', str2 = 'Favoritemu !';
-    const totalW = ctx.measureText(str1 + str2).width;
-    const startX = Math.round((w - totalW) / 2);
+    const startX = (DESIGN_W - ctx.measureText(str1 + str2).width) / 2;
 
-    drawText(ctx, str1, startX, layout.section.y, { font: ctx.font, color: COLOR.navy, align: 'left' });
-    drawText(ctx, str2, startX + ctx.measureText(str1).width, layout.section.y, { font: ctx.font, color: '#EE7515', align: 'left' });
+    drawText(ctx, str1, startX, LAYOUT.section.y, { font: ctx.font, color: COLOR.navy, align: 'left' });
+    drawText(ctx, str2, startX + ctx.measureText(str1).width, LAYOUT.section.y, { font: ctx.font, color: '#EE7515', align: 'left' });
 
-    // 6. Footer (Batas aman bawah >= 28px, Poppins 700)
-    drawText(ctx, 'Ruang Pelayanan Badan Pusat Statistik', w / 2, layout.footer.y,
-        { font: '700 9px "Poppins", sans-serif', color: '#5A7593', align: 'center', spacing: 0.4 });
+    // 6. Footer
+    drawText(ctx, 'Ruang Pelayanan Badan Pusat Statistik', DESIGN_W / 2, h - 18,
+        { font: fb(700, 8.6), color: '#9FB0C6', align: 'center', spacing: 0.4 });
 }
 
-function drawCardToCanvas(canvas, game, pressed = false, dpr = 2) {
+function drawCardToCanvas(canvas, game, pressed = false) {
     const ctx = canvas.getContext('2d');
-    const layout = getHubLayout(640);
-    const padX = 10;
-    const padY = 10;
-    const w = layout.card.w;
-    const h = layout.card.h;
-    const r = layout.card.r;
+    const w = LAYOUT.card.w;
+    const h = LAYOUT.card.h;
+    const r = LAYOUT.card.r;
+    const padX = 12;
+    const padY = 12;
+    const totalW = w + padX * 2;
+    const totalH = h + padY * 2;
 
-    canvas.width = Math.round((w + padX * 2) * dpr);
-    canvas.height = Math.round((h + padY * 2) * dpr);
-    ctx.scale(dpr, dpr);
+    canvas.width = totalW * 2;
+    canvas.height = totalH * 2;
+    ctx.scale(2, 2);
+
+    ctx.clearRect(0, 0, totalW, totalH);
+
+    const cx = padX + w / 2;
+    const cy = padY + h / 2;
+
+    ctx.save();
+    if (pressed) {
+        ctx.translate(cx, cy);
+        ctx.scale(0.985, 0.985);
+        ctx.translate(-cx, -cy);
+    }
 
     const cardX = padX;
-    const cardY = padY;
+    const cardY = padY + (pressed ? 1.5 : 0);
 
-    // 1. Soft Shadow
+    // 1. Soft, elegant drop shadow (Dual-pass blur with ample canvas padding)
     if (!pressed) {
+        // Pass 1: Diffuse ambient soft shadow
         ctx.save();
-        ctx.shadowColor = 'rgba(12, 59, 92, 0.08)';
+        ctx.shadowColor = 'rgba(15, 38, 70, 0.045)';
         ctx.shadowBlur = 12;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 4;
+        ctx.shadowOffsetY = 5;
+        ctx.fillStyle = '#FFFFFF';
+        roundRectPath(ctx, cardX, cardY, w, h, r);
+        ctx.fill();
+        ctx.restore();
+
+        // Pass 2: Direct contact soft shadow
+        ctx.save();
+        ctx.shadowColor = 'rgba(15, 38, 70, 0.055)';
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = '#FFFFFF';
+        roundRectPath(ctx, cardX, cardY, w, h, r);
+        ctx.fill();
+        ctx.restore();
+    } else {
+        // Pressed subtle contact shadow
+        ctx.save();
+        ctx.shadowColor = 'rgba(15, 38, 70, 0.04)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 1;
         ctx.fillStyle = '#FFFFFF';
         roundRectPath(ctx, cardX, cardY, w, h, r);
         ctx.fill();
@@ -411,7 +390,7 @@ function drawCardToCanvas(canvas, game, pressed = false, dpr = 2) {
     ctx.fill();
 
     // 3. Subtle Clean Card Border
-    ctx.strokeStyle = 'rgba(18, 55, 105, 0.08)';
+    ctx.strokeStyle = 'rgba(18, 55, 105, 0.07)';
     ctx.lineWidth = 1;
     roundRectPath(ctx, cardX + 0.5, cardY + 0.5, w - 1, h - 1, r - 0.5);
     ctx.stroke();
@@ -420,34 +399,34 @@ function drawCardToCanvas(canvas, game, pressed = false, dpr = 2) {
     ctx.save();
     roundRectPath(ctx, cardX, cardY, w, h, r);
     ctx.clip();
-    const glow = ctx.createLinearGradient(cardX, cardY, cardX + 88, cardY + 22);
+    const glow = ctx.createLinearGradient(cardX, cardY, cardX + 96, cardY + 24);
     glow.addColorStop(0, 'rgba(181, 221, 245, 0.55)');
     glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(cardX, cardY, 120, h);
+    ctx.fillRect(cardX, cardY, 130, h);
     ctx.restore();
 
     // 5. Icon (Vertically centered)
     ctx.save();
-    ctx.translate(cardX + layout.card.pad, cardY + (h - layout.icon.size) / 2);
+    ctx.translate(cardX + LAYOUT.card.pad, cardY + (h - LAYOUT.icon.size) / 2);
     ICONS[game.icon](ctx);
     ctx.restore();
 
-    // 6. Texts (Public Pixel for Eyebrow & Title; Poppins 700 for Desc)
-    const tx = cardX + layout.text.dx;
-    drawText(ctx, game.eyebrow, tx, cardY + layout.text.eyebrowDy, { font: `9px ${FONT_PIXEL}`, color: COLOR.blue, spacing: 0.5 });
-    drawText(ctx, game.title, tx, cardY + layout.text.titleDy, { font: `12px ${FONT_PIXEL}`, color: COLOR.navyText });
-    drawText(ctx, game.desc, tx, cardY + layout.text.descDy, { font: '700 9px "Poppins", sans-serif', color: '#6E809A' });
+    // 6. Texts (3 lines: Eyebrow + PIXEL Title + Desc)
+    const tx = cardX + LAYOUT.text.dx;
+    drawText(ctx, game.eyebrow, tx, cardY + LAYOUT.text.eyebrowDy, { font: fb(800, 9.6), color: COLOR.blue, spacing: 1.4 });
+    drawText(ctx, game.title, tx, cardY + LAYOUT.text.titleDy, { font: `12.5px ${FONT_PIXEL}`, color: COLOR.navyText });
+    drawText(ctx, game.desc, tx, cardY + LAYOUT.text.descDy, { font: fb(700, 9), color: '#6E809A' });
 
-    // 7. Button (Right side, minimal touch height 48px hit area)
+    // 7. Button (Right side)
     const b = {
-        x: cardX + w - layout.card.pad - layout.button.w,
-        y: cardY + (h - layout.button.h) / 2 - 1,
-        w: layout.button.w,
-        h: layout.button.h
+        x: cardX + w - LAYOUT.card.pad - LAYOUT.button.w,
+        y: cardY + (h - LAYOUT.button.h) / 2 - 1.5,
+        w: LAYOUT.button.w,
+        h: LAYOUT.button.h
     };
-    const fy = b.y + (pressed ? 2 : 0);
-    fillRoundRect(ctx, b.x, b.y + 2.5, b.w, b.h, b.h / 2, '#B5520C');
+    const fy = b.y + (pressed ? 2.5 : 0);
+    fillRoundRect(ctx, b.x, b.y + 3, b.w, b.h, b.h / 2, '#B5520C');
     const bg = ctx.createLinearGradient(0, fy, 0, fy + b.h);
     bg.addColorStop(0, '#FFA94F');
     bg.addColorStop(1, '#EE7515');
@@ -460,15 +439,15 @@ function drawCardToCanvas(canvas, game, pressed = false, dpr = 2) {
     ctx.restore();
 
     // Pixel PLAY Text & Triangle Icon
-    const f = `8px ${FONT_PIXEL}`;
+    const f = `8.5px ${FONT_PIXEL}`;
     const tw = measure(ctx, 'PLAY', f);
-    const iconW = 6.5;
-    const gap = 5.5;
+    const iconW = 7;
+    const gap = 6;
     const totalBtnW = iconW + gap + tw;
-    const sx = Math.round(b.x + (b.w - totalBtnW) / 2);
-    const btnCy = Math.round(fy + b.h / 2);
-    fillPolygon(ctx, [[sx, btnCy - 4], [sx, btnCy + 4], [sx + iconW, btnCy]], '#FFFFFF');
-    drawText(ctx, 'PLAY', sx + iconW + gap, btnCy + 3, { font: f, color: COLOR.white, spacing: 0.2 });
+    const sx = b.x + (b.w - totalBtnW) / 2;
+    const btnCy = fy + b.h / 2;
+    fillPolygon(ctx, [[sx, btnCy - 4.5], [sx, btnCy + 4.5], [sx + iconW, btnCy]], '#FFFFFF');
+    drawText(ctx, 'PLAY', sx + iconW + gap, btnCy + 3.2, { font: f, color: COLOR.white, spacing: 0.4 });
 
     ctx.restore();
 }
@@ -478,83 +457,42 @@ export class HubScene extends Phaser.Scene {
     constructor() {
         super({ key: 'HubScene' });
         this.audio = new RetroAudio();
-        this.cardSprites = [];
-        this.cardHitZones = [];
     }
 
     preload() {
         this.load.image('logo-bps', 'assets/logo-bps.webp');
+        this.load.image('mahkota', 'assets/mahkota-icon.webp');
+        this.load.image('restart-icon', 'assets/restart-icon.webp');
     }
 
-    async create() {
+    create() {
         this.cameras.main.resetFX();
         const dpr = this.game.config.width / 360;
-        const H = Math.round(this.game.config.height / dpr);
-        this.logicH = H;
-        this.dpr = dpr;
-
         this.cameras.main.setZoom(dpr);
-        this.cameras.main.centerOn(180, H / 2);
-        this.cameras.main.setBackgroundColor('#EBF3FB');
-        setSceneThemeColor('#EBF3FB', '#EAF1FF');
+        this.cameras.main.centerOn(180, 320);
 
         if (this.textures.exists('logo-bps')) {
             this.textures.get('logo-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
         }
 
-        await this._ensureFontsLoaded();
-        this._generateTextures(dpr, H);
-        this._buildStaticLayer(H);
+        this._generateTextures();
+        this._buildStaticLayer();
         this._buildAudioButton();
-        this._buildGameCards(H);
-        this._buildToast(H);
+        this._buildGameCards();
+        this._buildToast();
 
-        // Viewport resize listener for rotation / dynamic toolbar changes
-        this.game.events.on('viewport-resize', this._onViewportResize, this);
-
+        // Smooth fade-in
         this.cameras.main.fadeIn(200, 234, 241, 255);
     }
 
-    async _ensureFontsLoaded() {
-        await ensureFontsLoaded(2000);
-        if (typeof document !== 'undefined' && document.fonts) {
-            try {
-                await Promise.allSettled([
-                    document.fonts.load('8px "Public Pixel"'),
-                    document.fonts.load('10px "Public Pixel"'),
-                    document.fonts.load('12px "Public Pixel"'),
-                    document.fonts.load('700 12px "Poppins"')
-                ]);
-            } catch {
-                // Safe fallback
-            }
-        }
-    }
-
-    _onViewportResize({ logicW, logicH, dpr }) {
-        this.logicH = logicH;
-        this.dpr = dpr;
-        this.cameras.main.setZoom(dpr);
-        this.cameras.main.centerOn(180, logicH / 2);
-        this._generateTextures(dpr, logicH);
-
-        if (this.staticBgImage) {
-            this.staticBgImage.setTexture('hub-static-bg');
-            this.staticBgImage.setPosition(180, logicH / 2);
-            this.staticBgImage.setDisplaySize(360, logicH);
-        }
-
-        this._repositionGameCards(logicH);
-    }
-
-    _generateTextures(dpr = 2, H = 640) {
+    _generateTextures() {
         // 1. Static Layer Canvas Texture with loaded official BPS logo asset
         const bgCanvas = document.createElement('canvas');
         let logoImg = null;
         if (this.textures.exists('logo-bps')) {
             logoImg = this.textures.get('logo-bps').getSourceImage();
         }
-        drawStaticBackground(bgCanvas, logoImg, dpr, H);
+        drawStaticBackground(bgCanvas, logoImg);
 
         if (this.textures.exists('hub-static-bg')) {
             this.textures.remove('hub-static-bg');
@@ -564,9 +502,9 @@ export class HubScene extends Phaser.Scene {
         // 2. Cards Textures (Normal & Pressed)
         GAMES.forEach((game) => {
             const normalCanvas = document.createElement('canvas');
-            drawCardToCanvas(normalCanvas, game, false, dpr);
+            drawCardToCanvas(normalCanvas, game, false);
             const pressedCanvas = document.createElement('canvas');
-            drawCardToCanvas(pressedCanvas, game, true, dpr);
+            drawCardToCanvas(pressedCanvas, game, true);
 
             const keyNormal = `hub-card-${game.id}-normal`;
             const keyPressed = `hub-card-${game.id}-pressed`;
@@ -579,15 +517,16 @@ export class HubScene extends Phaser.Scene {
         });
     }
 
-    _buildStaticLayer(H = 640) {
-        this.staticBgImage = this.add.image(180, H / 2, 'hub-static-bg')
-            .setDisplaySize(360, H)
+    _buildStaticLayer() {
+        this.staticBgImage = this.add.image(180, 320, 'hub-static-bg')
+            .setDisplaySize(360, 640)
             .setDepth(1);
     }
 
     _buildAudioButton() {
-        const topY = 42;
-        this.audioBtn = this.add.container(326, topY).setDepth(25);
+        // Minimalist audio toggle matching header style
+        const topY = 24;
+        this.audioBtn = this.add.container(334, topY - (-10)).setDepth(25);
 
         const audioBg = this.add.graphics();
         audioBg.fillStyle(0xffffff, 0.92);
@@ -600,8 +539,7 @@ export class HubScene extends Phaser.Scene {
         this.audioBtn.add(this.audioIconG);
         this._drawAudioIcon();
 
-        // 48x48 hit zone for accessibility
-        const audioHit = this.add.zone(0, 0, 48, 48).setInteractive({ useHandCursor: true });
+        const audioHit = this.add.zone(0, 0, 34, 34).setInteractive({ useHandCursor: true });
         this.audioBtn.add(audioHit);
         audioHit.on('pointerdown', () => {
             this.audio.toggleMute();
@@ -635,31 +573,28 @@ export class HubScene extends Phaser.Scene {
         }
     }
 
-    _buildGameCards(H = 640) {
-        const layout = getHubLayout(H);
-        const padX = 10;
-        const padY = 10;
-        const spriteW = layout.card.w + padX * 2;
-        const spriteH = layout.card.h + padY * 2;
-        const cardHitW = layout.card.w;
-        const cardHitH = layout.card.h;
+    _buildGameCards() {
+        const scaleX = 360 / DESIGN_W;
+        const scaleY = 640 / DESIGN_H;
 
-        this.cardSprites = [];
-        this.cardHitZones = [];
+        const padX = 12;
+        const padY = 12;
+
+        const spriteW = (LAYOUT.card.w + padX * 2) * scaleX;
+        const spriteH = (LAYOUT.card.h + padY * 2) * scaleY;
+        const cardHitW = LAYOUT.card.w * scaleX;
+        const cardHitH = LAYOUT.card.h * scaleY;
 
         GAMES.forEach((game, i) => {
-            const cardY = i === 0 ? layout.card1Y : layout.card2Y;
-            const cy = cardY + layout.card.h / 2;
+            const cardDesignY = LAYOUT.card.y + i * LAYOUT.card.pitch;
+            const cy = (cardDesignY + LAYOUT.card.h / 2) * scaleY;
             const cx = 180;
 
             const cardSprite = this.add.image(cx, cy, `hub-card-${game.id}-normal`)
                 .setDisplaySize(spriteW, spriteH)
                 .setDepth(10);
-            this.cardSprites.push(cardSprite);
 
-            // Minimum 48px hit height target
-            const hitZone = this.add.zone(cx, cy, cardHitW, Math.max(48, cardHitH)).setInteractive({ useHandCursor: true }).setDepth(15);
-            this.cardHitZones.push(hitZone);
+            const hitZone = this.add.zone(cx, cy, cardHitW, cardHitH).setInteractive({ useHandCursor: true }).setDepth(15);
 
             hitZone.on('pointerdown', () => {
                 cardSprite.setTexture(`hub-card-${game.id}-pressed`);
@@ -673,58 +608,57 @@ export class HubScene extends Phaser.Scene {
 
             hitZone.on('pointerup', () => {
                 cardSprite.setTexture(`hub-card-${game.id}-normal`);
-                triggerHaptic(25);
-                this._launchGame(game.id);
+                this._onSelectGame(game.id, game.name);
             });
         });
     }
 
-    _repositionGameCards(H = 640) {
-        const layout = getHubLayout(H);
-        GAMES.forEach((game, i) => {
-            const cardY = i === 0 ? layout.card1Y : layout.card2Y;
-            const cy = cardY + layout.card.h / 2;
-            if (this.cardSprites[i]) this.cardSprites[i].setPosition(180, cy);
-            if (this.cardHitZones[i]) this.cardHitZones[i].setPosition(180, cy);
-        });
-
-        if (this.toastContainer) {
-            this.toastContainer.setPosition(180, Math.round(H - 80));
-        }
-    }
-
-    _buildToast(H = 640) {
-        this.toastContainer = this.add.container(180, Math.round(H - 80)).setDepth(50).setVisible(false);
+    _buildToast() {
+        this.toastContainer = this.add.container(180, 560).setDepth(50).setVisible(false);
         this.toastBg = this.add.graphics();
         this.toastContainer.add(this.toastBg);
 
         this.toastText = this.add.text(0, 0, '', {
-            fontFamily: FONT_HUB,
+            fontFamily: BODY,
             fontSize: '10px',
-            fontStyle: '700',
+            fontStyle: '800',
             color: '#FFFFFF'
         }).setOrigin(0.5).setResolution(3);
         this.toastContainer.add(this.toastText);
     }
 
-    _launchGame(gameId) {
-        let targetScene = '';
-        if (gameId === 'tenten') {
-            targetScene = 'BlockPuzzleScene';
-        } else if (gameId === 'memory-angka') {
-            targetScene = 'LevelSelectScene';
-        } else {
-            return;
-        }
+    _showToast(message) {
+        this.toastText.setText(message);
+        const w = this.toastText.width + 36;
+        const h = 28;
 
-        this.cameras.main.fadeOut(220, 234, 241, 255);
-        this.time.delayedCall(220, () => {
-            this.scene.start(targetScene);
+        this.toastBg.clear();
+        this.toastBg.fillStyle(0x0C3B5C, 0.94);
+        this.toastBg.fillRoundedRect(-w / 2, -h / 2, w, h, 14);
+
+        this.toastContainer.setVisible(true).setAlpha(0).setScale(0.9);
+        this.tweens.add({
+            targets: this.toastContainer,
+            alpha: 1,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 180,
+            ease: 'Back.easeOut'
         });
     }
 
-    shutdown() {
-        this.tweens.killAll();
-        this.game.events.off('viewport-resize', this._onViewportResize, this);
+    _onSelectGame(id, name) {
+        this._showToast(`Membuka ${name}...`);
+
+        this.time.delayedCall(160, () => {
+            this.cameras.main.fadeOut(180, 234, 241, 255);
+            this.time.delayedCall(180, () => {
+                if (id === 'tenten') {
+                    this.scene.start('BlockPuzzleScene');
+                } else if (id === 'memory-angka') {
+                    this.scene.start('MemoryLevelSelectScene');
+                }
+            });
+        });
     }
 }

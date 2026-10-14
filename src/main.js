@@ -4,36 +4,37 @@ import { HubScene } from './scenes/HubScene.js';
 import { BlockPuzzleScene } from './games/tenten/scenes/BlockPuzzleScene.js';
 import { LevelSelectScene } from './games/memory-angka/scenes/LevelSelectScene.js';
 import { MemoryScene } from './games/memory-angka/scenes/MemoryScene.js';
-import { computeLogicDimensions, initViewport } from './shared/Viewport.js';
 
 /**
  * BPS Waiting Game - Main Entry Point
  * Opening Splash -> Multi-Game Hub (Tenten & Memory Angka)
  */
 
-const { logicW, logicH, dpr } = computeLogicDimensions();
+const DPR = typeof window !== 'undefined'
+    ? Math.min(Math.max(window.devicePixelRatio || 1, 2), 3)
+    : 2;
 
-const GAME_WIDTH = logicW * dpr;
-const GAME_HEIGHT = logicH * dpr;
+const GAME_WIDTH = 360 * DPR;
+const GAME_HEIGHT = 640 * DPR;
 
 const config = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     parent: 'game-root',
-    backgroundColor: '#EBF3FB',
+    backgroundColor: '#F1F5F9',
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.NO_CENTER,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
         width: GAME_WIDTH,
         height: GAME_HEIGHT,
-        expandParent: false
+        expandParent: true
     },
     render: {
         antialias: true,
         antialiasGL: true,
         pixelArt: false,
-        roundPixels: true,
+        roundPixels: false,
         powerPreference: 'high-performance'
     },
     input: {
@@ -45,9 +46,7 @@ const config = {
 const startGame = () => {
     if (window.__bpsGameStarted) return;
     window.__bpsGameStarted = true;
-    const game = new Phaser.Game(config);
-    window.__bpsGame = game;
-    initViewport(game);
+    new Phaser.Game(config);
 };
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
