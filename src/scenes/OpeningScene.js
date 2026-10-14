@@ -34,9 +34,16 @@ export class OpeningScene extends Phaser.Scene {
             this.textures.get('opening-game-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
         }
 
-        // Render opening image dengan ukuran sama persis seperti main menu (360x640) tanpa ada yang terpotong
+        // Render opening image covering full visible canvas (cover mode, no distortion)
+        const logicH = this.game.config.height / dpr;
+        const imgW = 720, imgH = 1280; // opening-game-bps.webp actual dimensions
+        const imgAspect = imgW / imgH;
+        const viewAspect = 360 / logicH;
+        // Cover: fill both dimensions, crop excess
+        const dispW = viewAspect > imgAspect ? 360 : logicH * imgAspect;
+        const dispH = viewAspect > imgAspect ? 360 / imgAspect : logicH;
         const splash = this.add.image(180, 320, 'opening-game-bps')
-            .setDisplaySize(360, 640)
+            .setDisplaySize(dispW, dispH)
             .setAlpha(0);
 
         // Smooth fade-in tween
