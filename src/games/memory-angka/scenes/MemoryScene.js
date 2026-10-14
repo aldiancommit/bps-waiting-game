@@ -32,6 +32,7 @@ import {
     getMemoryLevelScores,
     saveMemoryTotalScore
 } from '../../../shared/Storage.js';
+import { sessionStore } from '../../../SessionState.js';
 
 export class MemoryScene extends Phaser.Scene {
     constructor() {
@@ -73,8 +74,13 @@ export class MemoryScene extends Phaser.Scene {
         this._buildPauseModal();
         this._setupAutoPause();
 
-        // Start Level
-        this._startLevel(this.level);
+        // Start or Restore Level
+        const saved = sessionStore.getGame('memory');
+        if (saved && saved.level === this.level && Array.isArray(saved.cards)) {
+            this._restoreLevel(saved);
+        } else {
+            this._startLevel(this.level);
+        }
 
         // Fade in
         this.cameras.main.fadeIn(200, 241, 245, 249);
@@ -501,8 +507,60 @@ export class MemoryScene extends Phaser.Scene {
 
     // ── Level Lifecycle ─────────────────────────────────────
 
+    _restoreLevel(saved) {
+        this.config = getLevelConfig(this.level);
+        this.levelText.setText(this.config.isEndless ? `♾️ ${this.level - TOTAL_CAMPAIGN_LEVELS}` : `LV ${this.level}`);
+        this._updateRuleBadge(this.config.orderRule);
+
+        this.lives = typeof saved.lives === 'number' ? saved.lives : MAX_LIVES;
+        this._updateLivesDisplay();
+
+        this.score = typeof saved.score === 'number' ? saved.score : 0;
+        this.combo = typeof saved.combo === 'number' ? saved.combo : 1;
+        this.mistakesCount = typeof saved.mistakesCount === 'number' ? saved.mistakesCount : 0;
+        this.usedPeek = false;
+        this.isPeeking = false;
+        this.isWrongBlinking = false;
+        this.isPaused = false;
+
+        this.scoreValText.setText(`${this.score}`);
+        this.comboValText.setText(`COMBO x${this.combo}`);
+
+        this.layout = { cells: saved.cards, signature: 0 };
+        this.previousSignature = 0;
+
+        if (this.config.orderRule === 'DESC') {
+            this.targetValues = Array.from({ length: this.config.numCount }, (_, i) => this.config.numCount - i);
+        } else {
+            this.targetValues = Array.from({ length: this.config.numCount }, (_, i) => i + 1);
+        }
+        const matched = Array.isArray(saved.matched) ? saved.matched : [];
+        this.targetIndex = matched.length;
+
+        this._setupGridTiles();
+        this.gameState = 'GUESS';
+        this.phaseLabel.setText('TEBAK SESUAI URUTAN').setColor('#10b981');
+        this.readyBtn.setVisible(false);
+        this.peekBtn.setVisible(true);
+        this._updatePeekButtonState();
+        this._drawCountdownProgress(0);
+        this.guessStartTime = performance.now() - (saved.elapsed || 0);
+
+        const matchedSet = new Set(matched);
+        this.activeTiles.forEach((tile) => {
+            if (matchedSet.has(tile.val)) {
+                tile.isRevealed = true;
+                this._drawTileGraphics(tile, 'CORRECT', tile.tileSize, tile.tileSize);
+            } else {
+                tile.isRevealed = false;
+                this._drawTileGraphics(tile, 'HIDDEN', tile.tileSize, tile.tileSize);
+            }
+        });
+    }
+
     _startLevel(levelNumber) {
         this.level = levelNumber;
+        sessionStore.clearGame('memory');
         this.config = getLevelConfig(levelNumber);
 
         this.levelText.setText(this.config.isEndless ? `♾️ ${this.level - TOTAL_CAMPAIGN_LEVELS}` : `LV ${this.level}`);
