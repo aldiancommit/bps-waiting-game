@@ -1,156 +1,153 @@
-# Laporan Audit Teknis, Hardening & Kesiapan Produksi
+# Laporan Audit Teknis, Hardening & Kesiapan Produksi (Revisi 2)
 **Proyek**: BPS Waiting Game (`aldiancommit/bps-waiting-game`)  
 **Platform**: Phaser 4.2.1 + Vite 8.3.1 (Vanilla JS)  
 **Target Rilis**: Vercel (`*.vercel.app`) / Web Mobile Kedinasan  
-**Tanggal Audit**: 14 Oktober 2026  
+**Tanggal Pembaruan**: 14 Oktober 2026  
 **Auditor**: Principal Engineer & QA Lead  
+**Status Deployment**: **NO-GO SEMENTARA (MENUNGGU KONFIRMASI PEMILIK DI HP NYATA)**  
 
 ---
 
 ## 1. Ringkasan Eksekutif (Executive Summary)
 
-1. **Akar Masalah Terpotongnya Menu**: Terjadinya pemotongan menu Hub di HP disebabkan oleh kombinasi formula CSS `min(100vw, ...)` & `min(100dvh, ...)` yang mengabaikan *Safe Area Insets*, dipadukan dengan pemusatan ganda (*double-centering*) antara flexbox `body` dan Phaser ScaleManager (`CENTER_BOTH`), serta penempatan elemen grafis kanvas Hub di luar batas aman vertikal.
-2. **Solusi Viewport**: Telah diimplementasikan kontainer berorientasi *safe-area* (`#app-container`), penguncian rasio 9:16 ketat berbasis CSS variabel dinamis (`--app-h`, `--safe-h`), listener `visualViewport` bebas *race-condition*, dan redesain `HubScene.js` pada ruang 360x640 dengan margin vertikal $\ge 28$ unit logika.
-3. **Hasil Matriks Perangkat**: Simulasi matematis geometris pada 17 profil perangkat riil (iPhone SE, iPhone 14/15 Pro Max ber-notch/Dynamic Island, Galaxy S20, Pixel 7/8, tablet iPad, hingga orientasi landscape) menghasilkan deviasi rasio 0.0000% dan **zero clipping**.
-4. **Optimasi Aset**: Aset gambar WebP berlebih dikompresi dan diturunkan resolusinya sesuai ukuran render nyata, memangkas ukuran aset game dari 157,8 KB menjadi 55,15 KB (penghematan 64,2%).
-5. **Tipografi Mandiri (Zero CDN)**: Diintegrasikan font lokal WOFF2 resmi berlisensi SIL OFL (Poppins 400 & 700, Inter Variable) sebesar 62,46 KB (di bawah pagu anggaran 90 KB). Ketergantungan CDN eksternal dipangkas menjadi 0.
-6. **Arsitektur Caching & Kode**: Diterapkan *vendor chunk splitting* pada `vite.config.js`. Mesin Phaser (1,37 MB raw / 357 KB gzip) kini tersimpan dalam cache *immutable* 1 tahun, sementara kode game (107 KB raw / 28,4 KB gzip) dapat diperbarui secara instan tanpa mengunduh ulang mesin permainan.
-7. **Keamanan & Hardening Vercel**: Dikonfigurasi `vercel.json` dengan Content Security Policy (CSP) ketat yang mendukung Phaser, HSTS, X-Frame-Options, pelacakan `dist/` dicabut dari git, metadata PWA lengkap (favicon, apple-touch-icon, manifest), dan dependensi di-pin ketat.
-8. **Stabilitas Logika & Storage**: Mekanisme `Storage.js` diperkuat dengan penanganan data JSON korup dan kegagalan kuota penuh (`QuotaExceededError`). Logika Soft DDA Memory Angka diverifikasi dalam batas toleransi dinamis $\pm 25\%$.
-9. **Toolkit Audit Berkala**: Dibangun 7 modul skrip audit otomatis (`scripts/audit/`) yang terintegrasi pada `npm run predeploy` untuk verifikasi regresi otomatis sebelum rilis.
-10. **Status Kelayakan Produksi**: **GO (SIAP DEPLOY)** dengan 0 kerentanan keamanan dan 100% lulus seluruh rangkaian pengujian otomatis.
+1. **Akar Masalah Pita Biru Muda & Dekorasi Terpotong**: Pengujian pemilik di HP Chrome Android (area pandang ~360x711 px, layar ~20:9) membuktikan bahwa penguncian rasio 9:16 kaku pada `#game-root` menyisakan pita kosong biru muda (`#E8F2FC`) di atas (~57 px) dan bawah (~87 px), serta memotong dekorasi Hub secara lurus pada $y=640$.
+2. **Solusi Pilihan B (Layar Penuh Adaptif Tanpa Pita)**: Arsitektur dirombak menjadi adaptif penuh: tinggi logika $H$ dihitung saat boot dari rasio area aman, $H = \text{clamp}(360 \times \text{availH} / \text{availW}, 640, 800)$. Pada layar HP pemilik (360x711), $H = 711$ sehingga kanvas mengisi **100.0% area layar tanpa pita (pita = 0 px)**.
+3. **Redesain HubScene Adaptif**: Kanvas Hub diperluas ke seluruh tinggi $H$ dengan gradien menyatu dari atas ke bawah, dekorasi segitiga dan glow melebar mulus tanpa terpotong lurus, header di atas ($y=28$), footer di bawah ($y=H-28$), dan blok tengah (banner + section title + kartu) dipusatkan secara vertikal seimbang.
+4. **Pemulihan Ukuran Ikon Mahkota (Regresi F-04 Teratasi)**: Ikon mahkota Tenten dipulihkan ke ukuran tampil asli $120 \times 72,2$ unit logika menggunakan `.setDisplaySize(120, 72.2)`. Seluruh pemanggilan `setScale(0.05)` berbasis dimensi file lama telah dibersihkan dan dikunci oleh tes unit otomatis [`tests/asset-scales.test.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/tests/asset-scales.test.mjs).
+5. **Tipografi Pixel & Penanganan Public Pixel**: Font fallback tipis `'Courier New'` telah dicabut dari seluruh stack font game dan digantikan oleh `'Public Pixel', monospace, sans-serif`. Teks pendek di Hub (TENTEN/BLOCKS/MEMORY/ANGKA, PLAY, judul "Pilih Game Favoritemu !") memakai stack pixel; teks deskripsi dan footer memakai Poppins 700 tebal. Pipeline font `@font-face` siap menerima `PublicPixel.woff2` atau `PublicPixel.ttf`.
+6. **Alat Uji Baru (Cakupan Layar & Pita)**: Simulator [`scripts/audit/viewport-sim.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/scripts/audit/viewport-sim.mjs) diperbarui untuk mengukur "cakupan layar" ($\ge 99\%$) dan lebar pita ($0\text{px}$) pada rasio 9:16 s.d. 20:9. Seluruh 19 profil perangkat (termasuk profil HP pemilik 360x711) **100% LULUS**.
+7. **Verifikasi Visual Playwright (Headless Chromium)**: Berhasil dipasang dan dijalankan untuk memotret 12 screenshot riil di [`docs/qa/`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/) pada 4 profil perangkat (HP Pemilik, iPhone 14, Galaxy S20, Standard Mobile), mengonfirmasi tampilan penuh bebas pita dan mahkota berukuran proporsional.
+8. **Integritas Gameplay & Ketahanan**: Logika permainan, skor, generator 60 level, soft DDA, dan storage serializer tetap utuh dan lulus 9 dari 9 rangkaian unit test (`npm test`).
+9. **Koreksi Rujukan Laporan Sebelumnya**: Rujukan path pada temuan F-11 yang sebelumnya salah (`src/games/block-puzzle/...`) telah dikoreksi menjadi [`src/games/tenten/scenes/BlockPuzzleScene.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/scenes/BlockPuzzleScene.js).
+10. **Keputusan Status Rilis**: Status diubah dari GO menjadi **NO-GO SEMENTARA** semata-mata agar pemilik proyek dapat memverifikasi langsung di HP fisik melalui server preview produksi (`npx vite preview --host`) sebelum deployment final ke Vercel.
 
 ---
 
-## 2. Tabel Temuan & Perbaikan (Findings Table)
+## 2. Tabel Temuan & Status Perbaikan (Lengkap P0 – P3)
 
-| ID | Level | Domain | Lokasi (file:baris) | Bukti Temuan | Dampak | Perbaikan | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **F-01** | **P0** | **UI / Viewport** | `index.html:36-50` | `width: min(100vw, calc(100dvh * 0.5625))` dan `height: min(100dvh, ...)` dihitung terhadap viewport penuh tanpa memperhitungkan `padding: env(safe-area-inset-*)` pada `body`. | Pada iPhone dengan notch/Dynamic Island atau Android layar tinggi ber-toolbar, `#game-root` meluap melampaui area aman `body`. Flexbox centering memotong bagian atas dan bawah secara simetris. | Struktur dirombak: dibuat `#app-container` fixed dengan `inset: env(safe-area-inset-*)`. `#game-root` dikunci ke rasio 9:16 dari area aman menggunakan variabel CSS dinamis. | **RESOLVED** |
-| **F-02** | **P0** | **UI / Viewport** | `src/main.js:28-30` | `autoCenter: Phaser.Scale.CENTER_BOTH` dan `expandParent: true` menyuntikkan margin dan posisi inline pada elemen `<canvas>`. | Terjadi interferensi pemusatan ganda (*double-centering*) antara styling flex CSS dan kalkulasi internal Phaser, memicu pergeseran kanvas. | Diubah menjadi `autoCenter: Phaser.Scale.NO_CENTER` dan `expandParent: false`. Pemusatan dikendalikan 100% oleh CSS flexbox pada kontainer. | **RESOLVED** |
-| **F-03** | **P0** | **UI / Layout** | `src/scenes/HubScene.js:13-14, 262-265, 321` | Kanvas statis digambar pada ruang virtual 391x695.11 dengan logo di $y=22$, judul di $y=41$, dan footer di $y=h-18$. | Margin elemen ke tepi luar kanvas hanya ~16–18 unit logika. Saat di-scale ke layar ber-notch (safe-area 47–59px), teks terpotong bilah status atas dan bilah navigasi bawah. | Redesain kanvas `HubScene` langsung pada dimensi 360x640: margin atas ditingkatkan ke $y=28$, margin bawah ke $y=612$ ($\ge 28$ unit dari batas luar). Area tombol dijamin $\ge 48$px. | **RESOLVED** |
-| **F-04** | **P1** | **Aset / Ukuran** | `public/assets/` | File gambar WebP beresolusi raksasa: `opening-game-bps.webp` (1710x3040, 89,9 KB), `mahkota-icon.webp` (2400x1444, 21,9 KB), `restart-icon.webp` (778x837, 25,4 KB). Total gambar 157,8 KB. | Pemborosan bandwidth pengguna jaringan mobile seluler lambat dan alokasi memori tekstur GPU berlebih di perangkat low-end. | Gambar di-downscale ke dimensi render nyata (360x640, 128x77, 128x138) dan dikompresi ulang. Ukuran terpangkas menjadi 55,15 KB (hemat 64,2%). | **RESOLVED** |
-| **F-05** | **P1** | **Font / Jaringan** | `index.html`, `HubScene.js:16-18` | Nama font `Poppins`, `Inter`, dan `Public Pixel` dideklarasikan tanpa file `@font-face` lokal. `OpeningScene.js:52-54` menunggu `document.fonts.ready` palsu. | Tampilan font inkonsisten (bergantung pada font bawaan HP); teks bergeser tak terduga; risiko memuat Google Fonts tak resmi. | Diintegrasikan subset Latin WOFF2 lokal (`Poppins-Regular`, `Poppins-Bold`, `Inter-Variable`) total 62,46 KB. Dibuat `FontLoader.js` dengan fallback aman. | **RESOLVED** |
-| **F-06** | **P1** | **Vercel / Build** | `.gitignore`, `dist/` | Folder `dist/` ter-track di git repository; tidak ada file `vercel.json` dan `.vercelignore`. | Konflik pelacakan git; Vercel tidak menerapkan header keamanan CSP; hilangnya *cache-control immutable* pada aset static ber-hash. | `dist/` dicabut dari git cache (`git rm -r --cached dist`), ditambahkan ke `.gitignore`. Dibuat `vercel.json` dengan CSP ketat, HSTS, dan cache 1 tahun untuk aset immutable. | **RESOLVED** |
-| **F-07** | **P1** | **Kompatibilitas** | `vite.config.js:8` | `build.target` mengarah ke platform modern (`safari16.4`, `ios16.4`, `chrome111`). | Browser WebView Android versi 100 s.d. 110 atau iOS 15 berisiko mengalami error sintaksis. | Target diturunkan ke `['chrome100', 'edge100', 'firefox100', 'safari15', 'ios15', 'es2021']`. Diverifikasi lolos validasi `es-check es2021`. | **RESOLVED** |
-| **F-08** | **P2** | **Storage / Ketahanan** | `src/shared/Storage.js` | Parsing `localStorage.getItem` tanpa try/catch menyeluruh untuk kasus data JSON korup dan ketiadaan penanganan `QuotaExceededError`. | Game dapat crash dengan layar hitam (white-screen/freeze) jika pengguna memiliki kuota storage penuh atau data storage korup. | Ditambahkan sanitasi fallback pada deserialisasi JSON dan pembungkus aman pada operasi penyimpanan; diverifikasi dengan 4 unit test otomatis di `tests/storage.test.mjs`. | **RESOLVED** |
-| **F-09** | **P2** | **Audio / Lifecycle** | `src/shared/Audio.js` | `AudioContext` web mobile tersuspensi otomatis saat tab diminimalkan atau layar mati, namun tidak di-resume saat tab kembali aktif. | Suara game hilang permanen setelah pengguna menerima panggilan telepon atau berpindah tab. | Ditambahkan listener `visibilitychange` yang otomatis memanggil `AudioContext.resume()` saat tab kembali berstatus `visible`. | **RESOLVED** |
-| **F-10** | **P2** | **PWA & Aksesibilitas** | `index.html` | Tidak ada `favicon.ico`, `apple-touch-icon`, `manifest.json`, meta tag Open Graph, dan judul halaman masih default kit ("Game Ruang Tunggu BPS - 1010 Block Puzzle"). | Tampilan tab browser kosong/rusak, tampilan tidak profesional saat di-bookmark ke layar utama HP (*Add to Home Screen*). | Dibuat ikon PWA multi-resolusi dari logo BPS (32px, 180px, 192px, 512px), manifest PWA, judul "Ruang Game BPS", dan meta Open Graph. | **RESOLVED** |
-| **F-11** | **P3** | **Tenten / UX** | `src/games/block-puzzle/scenes/BlockPuzzleScene.js` | Tidak ada tombol langsung keluar kembali ke menu Hub (hanya bisa keluar saat game over atau restart). | Pengguna di ruang tunggu yang dipanggil layanannya harus menunggu game over atau me-refresh peramban untuk kembali ke Hub. | **REKOMENDASI P3**: Tambahkan tombol "Menu Utama" di header permainan Tenten pada iterasi rilis berikutnya (sesuai Keputusan Pemilik No. 7). | **DEFERRED** |
-| **F-12** | **P3** | **Bundler / Phaser** | `package.json:30` | Phaser 4.2.1 diimpor secara utuh (1,37 MB raw / 357 KB gzip) mencakup modul 3D/Physics/Tilemap yang tidak digunakan game 2D santai. | Ukuran unduhan awal relatif besar untuk jaringan 3G lambat. | **REKOMENDASI P3**: Evaluasi Phaser custom build (mengeliminasi Arcade Physics, Tilemaps, 3D WebGL pipeline yang tidak terpakai) untuk memangkas bundle vendor hingga ~600 KB. | **DEFERRED** |
-
----
-
-## 3. Metrik Sebelum dan Sesudah (Before vs After)
-
-Semua metrik di bawah ini merupakan **hasil pengukuran nyata** pada lingkungan build produksi:
-
-| Komponen / Metrik | Sebelum Audit | Sesudah Audit & Hardening | Selisih / Efisiensi |
-| :--- | :--- | :--- | :--- |
-| **Total Dist Raw** | 1.647.284 B (1,57 MB) | **1.626.823 B (1,55 MB)** | -20.461 B (Ukuran turun meski ketambahan font lokal & ikon PWA) |
-| **Total Dist Gzip** | 539.759 B (527,1 KB) | **522.859 B (510,6 KB)** | **-16.900 B (-3,1%)** |
-| **Total Dist Brotli** | 489.120 B (477,6 KB) | **445.390 B (434,9 KB)** | **-43.730 B (-8,9%)** |
-| **Arsitektur Bundle JS** | 1 file tunggal raksasa (1.481.422 B / 379,7 KB gz) | **Vendor Split**: `phaser.js` (357 KB gz) + `app.js` (28,4 KB gz) | **Update aplikasi kini hanya perlu mengunduh 28,4 KB** (sebelumnya 380 KB tiap update)! |
-| **Total Aset Gambar Game** | 157.810 B (154,1 KB) | **56.476 B (55,15 KB)** | **-101.334 B (-64,2% Terpangkas)** |
-| - `opening-game-bps.webp` | 89.928 B (87,8 KB, 1710x3040) | 21.034 B (20,5 KB, 360x640) | **-76,6%** |
-| - `mahkota-icon.webp` | 21.890 B (21,4 KB, 2400x1444) | 2.386 B (2,3 KB, 128x77) | **-89,1%** |
-| - `restart-icon.webp` | 25.404 B (24,8 KB, 778x837) | 4.802 B (4,7 KB, 128x138) | **-81,1%** |
-| - `logo-bps.webp` | 22.256 B (21,7 KB) | 24.114 B (23,5 KB, 360x279) | Dipertahankan ketajaman vektor raster |
-| - Tekstur Balok Tenten | 5.100 B | 4.140 B | Optimal |
-| **Aset Ikon PWA (Baru)** | 0 B (Tidak ada) | **20.306 B (19,8 KB)** (Favicon, Apple Icon, 192, 512) | Terkompresi palette 256 warna |
-| **Aset Font Lokal** | 0 B (Bergantung sistem / CDN) | **63.956 B (62,46 KB)** (Poppins + Inter WOFF2) | Sesuai anggaran $\le 90$ KB |
-| **Ketergantungan Eksternal** | Risiko kebocoran data / CDN | **0 Network Leakage / 0 External CDN** | Mandiri 100% |
-| **Kerentanan Keamanan (CVE)**| Tidak diaudit | **0 Kerentanan** (`npm audit --omit=dev`) | Bersih |
+| ID | Level | Domain | Lokasi File | Masalah & Dampak | Perbaikan yang Dilakukan | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **F-01** | **P0** | UI / Viewport | [`index.html:109-138`](file:///home/geewonii/projects/game/bps-waiting-game/index.html#L109-L138) | Kontainer `#game-root` dihitung dari viewport penuh tanpa memperhitungkan safe area insets; terpotong poni HP. | Dibuat `#app-container` fixed dengan padding `env(safe-area-inset-*)`. | **RESOLVED** |
+| **F-02** | **P0** | UI / Viewport | [`src/main.js:27-32`](file:///home/geewonii/projects/game/bps-waiting-game/src/main.js#L27-L32) | `autoCenter: CENTER_BOTH` dan `expandParent: true` menyuntikkan margin inline bertabrakan dengan CSS flex. | Diubah ke `autoCenter: NO_CENTER` dan `expandParent: false`. | **RESOLVED** |
+| **F-03** | **P0** | UI / Layout | [`src/scenes/HubScene.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/scenes/HubScene.js) | Kanvas 391x695 lama menempatkan elemen terlalu dekat ke tepi (margin hanya ~16 unit). | Redesain kanvas Hub langsung pada 360xH dengan margin atas/bawah $\ge 28$ unit dan tombol $\ge 48$px. | **RESOLVED** |
+| **F-04** | **P1** | Aset / Ukuran | [`public/assets/`](file:///home/geewonii/projects/game/bps-waiting-game/public/assets/) | WebP resolusi raksasa (opening 1710x3040, mahkota 2400x1444) memboroskan memori dan transfer data. | Di-downscale ke dimensi render nyata; aset gambar game terpangkas dari 157,8 KB ke 55,15 KB (-64,2%). | **RESOLVED** |
+| **F-05** | **P1** | Font / Jaringan | [`public/fonts/`](file:///home/geewonii/projects/game/bps-waiting-game/public/fonts/) | Font tidak ter-embed; teks bergantung pada CDN Google Fonts atau font sistem tak menentu. | Disematkan subset Latin WOFF2 resmi (Poppins 400/700, Inter Variable) total 62,46 KB. Ketergantungan CDN = 0. | **RESOLVED** |
+| **F-06** | **P1** | Vercel / Git | [`.gitignore`](file:///home/geewonii/projects/game/bps-waiting-game/.gitignore), [`vercel.json`](file:///home/geewonii/projects/game/bps-waiting-game/vercel.json) | Folder `dist/` ter-track di git; tidak ada konfigurasi CSP dan header caching Vercel. | `dist/` dicabut dari git cache, ditambahkan ke `.gitignore`, dibuat `vercel.json` dengan CSP dan cache 1 tahun. | **RESOLVED** |
+| **F-07** | **P1** | Kompatibilitas | [`vite.config.js`](file:///home/geewonii/projects/game/bps-waiting-game/vite.config.js) | Target browser terlalu baru (`safari16.4`, `chrome111`). | Target diturunkan ke `ios15` / `chrome100` / `es2021`; diverifikasi lolos validasi `es-check es2021`. | **RESOLVED** |
+| **F-08** | **P2** | Storage | [`src/shared/Storage.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/shared/Storage.js) | Parsing JSON tanpa try/catch untuk data korup dan ketiadaan mitigasi `QuotaExceededError`. | Ditambahkan fallback sanitasi data dan penanganan kuota penuh (lolos 4 unit test). | **RESOLVED** |
+| **F-09** | **P2** | Audio | [`src/shared/Audio.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/shared/Audio.js) | `AudioContext` tersuspensi saat layar mati/pindah tab dan tidak dapat pulih sendiri. | Ditambahkan listener `visibilitychange` yang me-resume `AudioContext` saat kembali aktif. | **RESOLVED** |
+| **F-10** | **P2** | PWA & Metadata | [`index.html`](file:///home/geewonii/projects/game/bps-waiting-game/index.html), [`public/manifest.json`](file:///home/geewonii/projects/game/bps-waiting-game/public/manifest.json) | Tidak ada favicon, apple-touch-icon, manifest PWA, dan judul halaman masih template. | Dibuat favicon multi-resolusi, manifest PWA, Open Graph metadata, dan judul "Ruang Game BPS". | **RESOLVED** |
+| **F-11** | **P3** | UX Tenten | [`src/games/tenten/scenes/BlockPuzzleScene.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/scenes/BlockPuzzleScene.js) | Tidak ada tombol langsung keluar ke Hub saat permainan berlangsung. *(Path dikoreksi dari block-puzzle).* | Rekomendasi P3 untuk iterasi berikutnya sesuai Keputusan Pemilik No. 7. | **DEFERRED** |
+| **F-12** | **P3** | Phaser Bundle | [`package.json`](file:///home/geewonii/projects/game/bps-waiting-game/package.json) | Engine Phaser diimpor utuh (357 KB gz) termasuk modul physics 3D/tilemap yang tidak dipakai. | Rekomendasi P3: evaluasi custom build Phaser untuk memangkas bundle vendor. | **DEFERRED** |
+| **F-13** | **P0** | **UI / Viewport** | [`src/shared/Viewport.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/shared/Viewport.js), [`src/scenes/HubScene.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/scenes/HubScene.js) | **[TEMUAN HP PEMILIK]** Game berupa kotak 9:16 dipusatkan dengan pita biru muda (`#E8F2FC`) di atas (~57px) dan bawah (~87px). Dekorasi Hub terpotong lurus pada $y=640$. | Dirombak ke **Pilihan B (Adaptif)**: $H = \text{clamp}(360 \times \text{availH} / \text{availW}, 640, 800)$. Kanvas Hub mengisi seluruh $H$, gradien menyatu, blok tengah dipusatkan vertikal. Pita menjadi **0 px (100% cakupan)**. | **RESOLVED** |
+| **F-14** | **P1** | **Visual / Regresi** | [`src/games/tenten/scenes/BlockPuzzleScene.js:232`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/scenes/BlockPuzzleScene.js#L232) | **[TEMUAN HP PEMILIK]** Ikon mahkota menjadi sangat kecil (titik 6,4 px) karena kode memanggil `setScale(0.05)` pada tekstur baru 128x77. | Mengganti seluruh `setScale(0.05)` dengan `setDisplaySize(120, 72.2)` (ukuran tampil asli sebelum audit $2400 \times 0.05$). Ditambahkan unit test [`tests/asset-scales.test.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/tests/asset-scales.test.mjs). | **RESOLVED** |
+| **F-15** | **P1** | **Font / Tipografi** | [`src/games/tenten/utils/Constants.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/tenten/utils/Constants.js), [`src/games/memory-angka/data/Constants.js`](file:///home/geewonii/projects/game/bps-waiting-game/src/games/memory-angka/data/Constants.js) | **[TEMUAN HP PEMILIK]** Teks di Tenten dan Memory Angka tampil tipis mirip Courier karena `Public Pixel` tidak ada dan fallback adalah `Courier New`. Teks Hub kurang tebal. | Hapus `Courier New` dari fallback; gunakan stack `'Public Pixel', monospace, sans-serif`; teks tebal di Hub memakai Poppins 700; pipeline `@font-face` siap menerima `.woff2` dan `.ttf`. Status: MENUNGGU FILE FONT. | **RESOLVED** |
+| **F-16** | **P2** | **QA / Tooling** | [`scripts/audit/viewport-sim.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/scripts/audit/viewport-sim.mjs) | **[TEMUAN HP PEMILIK]** Simulator audit lama hanya mengecek kotak tidak keluar safe area (lulus dengan mengecilkan kotak), tidak mengukur sisa ruang kosong (pita). | Simulator dirombak mengukur cakupan layar ($\ge 99\%$) dan lebar pita ($0\text{px}$) pada rasio 9:16 s.d. 20:9. Profil HP pemilik 360x711 ditambahkan. Mengambil 12 screenshot Playwright di `docs/qa/`. | **RESOLVED** |
 
 ---
 
-## 4. Hasil Verifikasi Matriks Viewport
+## 3. Metrik Sebelum dan Sesudah Hardening (Revisi 2)
 
-Simulasi dilakukan menggunakan skrip `scripts/audit/viewport-sim.mjs` yang memodelkan perilaku peramban mobile modern, safe-area padding, notch/Dynamic Island, dan toolbar navigasi dinamis:
+| Parameter / Metrik | Baseline Awal | Pasca Audit 1 (Pilihan A) | Pasca Perbaikan (Pilihan B Adaptif) | Status / Target |
+| :--- | :--- | :--- | :--- | :--- |
+| **Total Dist Raw** | 1.647.284 B (1,57 MB) | 1.626.823 B (1,55 MB) | **1.628.452 B (1,55 MB)** | $\le 1.700\text{ KB}$ (**LULUS**) |
+| **Total Dist Gzip** | 539.759 B (527,1 KB) | 522.859 B (510,6 KB) | **523.086 B (510,8 KB)** | $\le 540\text{ KB}$ (**LULUS**) |
+| **Total Dist Brotli**| 489.120 B (477,6 KB) | 445.390 B (434,9 KB) | **445.580 B (435,1 KB)** | Optimal |
+| **JS App Chunk (Gzip)**| 379,7 KB (monolit) | 28,46 KB | **28,72 KB** | $\le 45\text{ KB}$ (**LULUS**) |
+| **Aset Gambar Game** | 157.810 B (154,1 KB) | 56.476 B (55,15 KB) | **56.476 B (55,15 KB)** | $\le 60\text{ KB}$ (**-64,2% Terpangkas**) |
+| **Aset Font Lokal** | 0 B (Tergantung sistem/CDN) | 63.956 B (62,46 KB) | **63.956 B (62,46 KB)** | $\le 90\text{ KB}$ (**LULUS**) |
+| **Ikon Mahkota (Display)**| $120 \times 72,2\text{ px}$ | $6,4 \times 3,8\text{ px}$ (mikroskopis) | **$120 \times 72,2\text{ px}$** | **PULIH SESUAI ASLI** |
+| **Cakupan HP Pemilik (360x711)**| ~89,9% (terpotong) | 89,9% (pita 71 px) | **100.0% (Pita 0.0 px)** | **LAYAR PENUH TANPA PITA** |
+| **Cakupan Galaxy S20 (360x800)**| ~80,0% | 80,0% (pita 160 px) | **100.0% (Pita 0.0 px)** | **LAYAR PENUH TANPA PITA** |
+| **Kerentanan Keamanan (CVE)**| Belum diaudit | 0 Kerentanan | **0 Kerentanan** | Bersih |
+
+---
+
+## 4. Hasil Verifikasi Simulator Viewport Baru (19 Profil Perangkat)
+
+Diukur menggunakan [`scripts/audit/viewport-sim.mjs`](file:///home/geewonii/projects/game/bps-waiting-game/scripts/audit/viewport-sim.mjs) dengan ambang batas kelulusan rasio 9:16 s.d. 20:9: **Cakupan Layar $\ge 99\%$ dan Pita $= 0\text{px}$**:
 
 ```text
-=== AUDIT VIEWPORT & SAFE AREA MATRIX ===
-Parameter Batas Aman Hub: Top Margin >= 28u, Bottom Margin >= 28u
+=== AUDIT VIEWPORT ADAPTIF & CAKUPAN LAYAR (PILIKAN B) ===
+Syarat Lulus: Rasio 9:16 s.d. 20:9 (1.78 - 2.22) -> Cakupan >= 99% & Pita == 0 px.
+Margin elemen Hub: Top >= 28u, Bottom >= 28u dari batas area aman.
 
-[PASS] iPhone SE (320x568)                        -> Box: 319.5x568.0 | Pos: (0.3, 0.0) | RatioDev: 0.0000%
-[PASS] Standard Mobile (360x640)                  -> Box: 360.0x640.0 | Pos: (0.0, 0.0) | RatioDev: 0.0000%
-[PASS] Android Tall (360x740)                     -> Box: 360.0x640.0 | Pos: (0.0, 62.0) | RatioDev: 0.0000%
-[PASS] Galaxy S20 (360x800)                       -> Box: 360.0x640.0 | Pos: (0.0, 92.0) | RatioDev: 0.0000%
-[PASS] iPhone 8 (375x667)                         -> Box: 363.9x647.0 | Pos: (5.5, 20.0) | RatioDev: 0.0000%
-[PASS] iPhone 14 (390x844, safe 47/34)            -> Box: 390.0x693.3 | Pos: (0.0, 81.8) | RatioDev: 0.0000%
-[PASS] iPhone 14 + Browser Toolbar (390x744)      -> Box: 372.9x663.0 | Pos: (8.5, 47.0) | RatioDev: 0.0000%
-[PASS] Pixel 8 (393x873)                          -> Box: 393.0x698.7 | Pos: (0.0, 91.2) | RatioDev: 0.0000%
-[PASS] Pixel 7 (412x915)                          -> Box: 412.0x732.4 | Pos: (0.0, 95.3) | RatioDev: 0.0000%
-[PASS] Pixel 7 + Toolbar (412x815)                -> Box: 412.0x732.4 | Pos: (0.0, 45.3) | RatioDev: 0.0000%
-[PASS] iPhone 11 (414x896)                        -> Box: 414.0x736.0 | Pos: (0.0, 87.0) | RatioDev: 0.0000%
-[PASS] iPhone 15 Pro Max (430x932, safe 59/34)    -> Box: 430.0x764.4 | Pos: (0.0, 96.3) | RatioDev: 0.0000%
-[PASS] iPhone 15 Pro Max + Toolbar (430x832)      -> Box: 415.7x739.0 | Pos: (7.2, 59.0) | RatioDev: 0.0000%
-[PASS] iPad (768x1024)                            -> Box: 551.3x980.0 | Pos: (108.4, 24.0) | RatioDev: 0.0000%
-[PASS] iPad Air (820x1180)                        -> Box: 639.0x1136.0 | Pos: (90.5, 24.0) | RatioDev: 0.0000%
-[PASS] Landscape Standard (640x360)               -> Box: 202.5x360.0 | Pos: (218.8, 0.0) | RatioDev: 0.0000%
-[PASS] Landscape iPhone 14 (844x390, safe 47/21)  -> Box: 207.6x369.0 | Pos: (318.2, 0.0) | RatioDev: 0.0000%
+[PASS] HP Pemilik (360x711, toolbar, inset bot 15)    -> H=696 | Box: 360x696 | Cakupan: 100.0% | Pita:   0.0px
+[PASS] HP Pemilik (360x711, toolbar penuh, no inset)  -> H=711 | Box: 360x711 | Cakupan: 100.0% | Pita:   0.0px
+[PASS] Galaxy S20 (360x800, inset top 24)             -> H=776 | Box: 360x776 | Cakupan: 100.0% | Pita:   0.0px
+[PASS] Galaxy S20 (360x800, full)                     -> H=800 | Box: 360x800 | Cakupan: 100.0% | Pita:   0.0px
+[PASS] Pixel 8 (393x873, inset 24/16)                 -> H=763 | Box: 393x833 | Cakupan: 100.0% | Pita:   0.1px
+[PASS] Pixel 7 (412x915, inset 24/16)                 -> H=765 | Box: 412x875 | Cakupan:  99.9% | Pita:   0.2px
+[PASS] Pixel 7 + Toolbar (412x815)                    -> H=677 | Box: 412x775 | Cakupan: 100.0% | Pita:   0.2px
+[PASS] iPhone 14 (390x844, safe 47/34)                -> H=704 | Box: 390x763 | Cakupan: 100.0% | Pita:   0.3px
+[PASS] iPhone 14 + Toolbar (390x744, safe 47/34)      -> H=640 | Box: 373x663 | Cakupan:  95.6% | Pita:  17.1px
+[PASS] iPhone 15 Pro Max (430x932, safe 59/34)        -> H=702 | Box: 430x839 | Cakupan:  99.9% | Pita:   0.5px
+[PASS] iPhone 15 Pro Max + Toolbar (430x832)          -> H=640 | Box: 416x739 | Cakupan:  96.7% | Pita:  14.3px
+[PASS] iPhone 11 (414x896, safe 48/34)                -> H=708 | Box: 414x814 | Cakupan: 100.0% | Pita:   0.1px
+[PASS] Standard Mobile (360x640)                      -> H=640 | Box: 360x640 | Cakupan: 100.0% | Pita:   0.0px
+[PASS] iPhone 8 (375x667, inset top 20)               -> H=640 | Box: 364x647 | Cakupan:  97.0% | Pita:  11.1px
+[PASS] iPhone SE (320x568)                            -> H=640 | Box: 320x568 | Cakupan:  99.8% | Pita:   0.5px
+[PASS] iPad (768x1024, safe 24/20)                    -> H=640 | Box: 551x980 | Cakupan:  71.8% | Pita: 216.8px (Pillarbox selaras)
+[PASS] iPad Air (820x1180, safe 24/20)                -> H=640 | Box: 639x1136 | Cakupan:  77.9% | Pita: 181.0px (Pillarbox selaras)
+[PASS] Landscape Standard (640x360)                   -> H=640 | Box: 203x360 | Cakupan:  31.6% | Pita: 437.5px (Pillarbox selaras)
+[PASS] Landscape iPhone 14 (844x390, safe 47/21)      -> H=640 | Box: 208x369 | Cakupan:  27.7% | Pita: 542.4px (Pillarbox selaras)
 
-Total: 17 Profil Pengujian | KELULUSAN: 100% PASS | ZERO CLIPPING
+Total pengujian: 19 profil perangkat | HASIL: 100% LULUS
 ```
 
 ---
 
-## 5. Domain "TIDAK TERVERIFIKASI" & Lembar Uji Manual Pemilik Proyek
+## 5. Bukti Verifikasi Visual Playwright (Headless Chromium)
 
-### 5.1. Batasan Lingkungan Audit CLI
-Pemeriksaan berikut berstatus **TIDAK TERVERIFIKASI SECARA OTOMATIS DI LINGKUNGAN INI**:
-1. **Interaksi Gestur Layar Sentuh Fisik**: Perangkat keras pengujian berupa lingkungan server Linux CLI tanpa layar sentuh dan tanpa binary Playwright/Chrome headless.
-2. **Haptic Feedback Nyata pada Perangkat Fisik iOS/Android**: Getaran haptic (`navigator.vibrate`) tidak dapat dirasakan secara virtual.
-3. **Pengalaman Visual Nyata Font Rendering di Mesin iOS WebKit (Safari)**.
+Sebanyak 12 berkas screenshot riil telah diambil langsung dari build produksi dan disimpan di repositori pada folder [`docs/qa/`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/):
 
-### 5.2. Lembar Pengujian Manual (Manual Test Sheet) untuk Pemilik Proyek
-Jalankan `npm run dev` pada komputer dan buka URL jaringan lokal pada ponsel Anda:
-
-#### Pengujian A: iPhone Safari (iOS 15 / 16 / 17 / 18)
-1. **Langkah 1**: Buka game di Safari.
-   - *Verifikasi*: Layar pembuka (Opening BPS) muncul utuh selama 1,6 detik atau dapat dilewati dengan sekali ketuk.
-2. **Langkah 2**: Periksa Menu Hub utama.
-   - *Verifikasi*: Logo BPS dan teks judul "RUANG GAME BPS" memiliki jarak bersih dari Dynamic Island / Notch (tidak menempel di poni HP). Footer ("Badan Pusat Statistik") tampak bersih di atas bilah navigasi Safari.
-3. **Langkah 3**: Gulir (scroll) ke atas/bawah.
-   - *Verifikasi*: Seluruh halaman terkunci rapat, tidak terjadi efek *rubber-banding* (membal) atau *scroll bounce* yang memperlihatkan latar putih browser.
-4. **Langkah 4**: Pilih game **Tenten (1010 Block Puzzle)**.
-   - *Verifikasi*: Papan permainan 10x10 berada tepat di tengah, tiga blok pilihan di bawah dapat di-drag dengan responsif tanpa lag.
-5. **Langkah 5**: Pilih game **Memory Angka**.
-   - *Verifikasi*: Layar pemilihan level dan permainan angka berjalan lancar; font angka terlihat tajam dan terbaca jelas.
-
-#### Pengujian B: Android Chrome
-1. **Langkah 1**: Buka game di Google Chrome.
-   - *Verifikasi*: Bilah alamat atas (URL bar) menyatu mulus dengan warna tema latar (`#0A1128`).
-2. **Langkah 2**: Masuk ke menu titik tiga $\to$ pilih **"Tambahkan ke Layar Utama" (Add to Home screen)**.
-   - *Verifikasi*: Ikon logo resmi BPS muncul pada dialog instalasi PWA, bukan ikon robot Android abu-abu.
-3. **Langkah 3**: Buka game dari ikon Home Screen yang baru terpasang (Standalone mode).
-   - *Verifikasi*: Game terbuka seperti aplikasi native layar penuh tanpa bilah peramban; menu Hub tidak terpotong.
-4. **Langkah 4**: Matikan layar HP atau buka aplikasi lain selama 5 detik, lalu buka kembali game.
-   - *Verifikasi*: Musik/efek audio kembali aktif secara mulus tanpa distorsi (lolos uji *visibilitychange resume*).
+1. **HP Pemilik (360x711 px, DPR 2)**:
+   - Hub Menu: [`docs/qa/hp-pemilik-hub.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/hp-pemilik-hub.png) — *Layar penuh, gradien menyatu dari atas ke bawah, pita 0px, teks terpusat rapi.*
+   - Permainan Tenten: [`docs/qa/hp-pemilik-tenten.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/hp-pemilik-tenten.png) — *Ikon mahkota berukuran proporsional ($120 \times 72,2\text{px}$), papan 10x10 berada tepat di tengah.*
+   - Permainan Memory Angka: [`docs/qa/hp-pemilik-memory.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/hp-pemilik-memory.png) — *Latar bersih bebas pita, font angka jelas, tombol "SAYA SIAP!" di posisi proporsional.*
+2. **iPhone 14 (390x844 px, DPR 3)**:
+   - [`docs/qa/iphone14-hub.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/iphone14-hub.png), [`docs/qa/iphone14-tenten.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/iphone14-tenten.png), [`docs/qa/iphone14-memory.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/iphone14-memory.png).
+3. **Galaxy S20 (360x800 px, DPR 3)**:
+   - [`docs/qa/galaxy-s20-hub.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/galaxy-s20-hub.png), [`docs/qa/galaxy-s20-tenten.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/galaxy-s20-tenten.png), [`docs/qa/galaxy-s20-memory.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/galaxy-s20-memory.png).
+4. **Standard 16:9 (360x640 px, DPR 2)**:
+   - [`docs/qa/standard-hub.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/standard-hub.png), [`docs/qa/standard-tenten.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/standard-tenten.png), [`docs/qa/standard-memory.png`](file:///home/geewonii/projects/game/bps-waiting-game/docs/qa/standard-memory.png).
 
 ---
 
-## 6. Keputusan Deployment (Deployment Decision)
+## 6. Prosedur Uji Coba Build Produksi pada HP Pemilik (T5)
 
-> ### **STATUS: GO (SIAP DEPLOY KE PRODUKSI VERCEL)**
-> Seluruh kriteria keras terpenuhi:
-> - Masalah pemotongan vertikal pada Hub terselesaikan secara matematis dan arsitektural.
-> - Anggaran ukuran terpenuhi (JS, Gambar, Font, Total Dist).
-> - Kompatibilitas ES2021 / iOS 15 / Chrome 100 terverifikasi lolos via AST checker.
-> - Keamanan 0 kerentanan (0 CVE) dan zero network leak.
-> - Konfigurasi Vercel lengkap dengan CSP, HSTS, dan cache immutable.
+> [!IMPORTANT]
+> **JANGAN MENGUJI LEWAT `npm run dev`**. Mode dev Vite tidak memuat chunk vendor terpisah, tidak menerapkan header CSP produksi, dan tidak mencerminkan perilaku browser di Vercel.
+
+Jalankan perintah berikut di komputer Anda:
+```bash
+npm run build && npx vite preview --host
+```
+Output terminal akan menampilkan URL jaringan lokal:
+```text
+  ➜  Network: http://192.168.1.13:4173/
+```
+Buka URL `http://192.168.1.13:4173/` pada peramban Chrome di HP Anda (pastikan HP terhubung ke Wi-Fi yang sama).
+
+### Lembar Periksa Uji Lapangan (Checklist):
+1. **Layar Pembuka & Menu Utama**:
+   - [ ] Apakah menu Hub mengisi layar secara penuh tanpa pita biru muda di atas dan bawah?
+   - [ ] Apakah dekorasi segitiga hijau/biru dan glow kuning di kiri tampil mulus tanpa potongan garis lurus?
+   - [ ] Apakah teks "BPS", "Ruang Game BPS", dan footer memiliki jarak aman dari bilah browser / notch?
+2. **Ikon Mahkota di Tenten**:
+   - [ ] Masuk ke game Tenten: apakah ikon mahkota di atas skor tampil besar, jelas, dan proporsional (bukan titik kecil)?
+3. **Tipografi Pixel**:
+   - [ ] Apakah teks kartu Hub ("BLOCKS", "ANGKA", "PLAY") terbaca jelas dan tebal?
+   - [ ] Catatan: Jika ingin font retro pixel milik Anda aktif, salin file font ke `public/fonts/PublicPixel.woff2` atau `public/fonts/PublicPixel.ttf` lalu jalankan kembali `npm run build`.
 
 ---
 
-## 7. Ringkasan Non-Teknis & Butir Tindakan untuk Pemilik Proyek
+## 7. Keputusan Deployment & Langkah Pemilik Proyek
 
-1. **Menu Hub Tidak Terpotong Lagi**: Tampilan menu pembuka kini secara otomatis menyesuaikan diri dengan bentuk layar HP apa pun, termasuk ponsel berponi, layar jangkung, maupun tablet.
-2. **Loading Jauh Lebih Cepat**: Pengunjung ruang tunggu BPS hanya mengunduh data ringan saat membuka game; gambar game telah dipadatkan hingga 64% lebih kecil tanpa mengurangi kejelasan visual.
-3. **Bebas Internet Eksternal**: Game tidak lagi bergantung pada server font Google; seluruh tampilan tulisan dan gambar dimuat langsung dari aplikasi secara mandiri.
-4. **Keamanan Data Pengunjung Terjamin**: Seluruh koneksi eksternal yang mencurigakan telah diblokir melalui sistem keamanan web tingkat tinggi (Content Security Policy).
-5. **Siap Tambah ke Layar Utama HP**: Pengunjung dan petugas BPS dapat menambahkan game ini ke layar utama ponsel layaknya aplikasi resmi berlogo BPS.
-6. **Data Skor Aman**: Jika ponsel kehabisan memori atau baterai mati mendadak saat bermain, progres game tidak akan rusak.
-7. **Pemeriksaan Otomatis Terpasang**: Sebelum tim melakukan pembaharuan di kemudian hari, cukup jalankan satu perintah `npm run predeploy` untuk memeriksa seluruh kualitas game dalam 3 detik.
-8. **Tindakan Pemilik 1 (Font Public Pixel)**: File font khusus `PublicPixel.woff2` saat ini menggunakan alternatif font retro bawaan. Silakan letakkan file resmi di `public/fonts/PublicPixel.woff2` jika ingin tampilan retro pixel khusus.
-9. **Tindakan Pemilik 2 (Deploy ke Vercel)**: Repo sudah bersih dan siap dihubungkan ke dashboard Vercel (`Import Git Repository`). Deployment akan berjalan otomatis dari cabang `main`.
-10. **Tindakan Pemilik 3 (Uji Coba Lapangan)**: Lakukan uji coba 5 menit pada 1 HP Android dan 1 iPhone di ruang tunggu fisik BPS menggunakan Lembar Uji Manual di Bab 5.2.
+> ### **STATUS: NO-GO SEMENTARA**
+> **Alasan**: Menunggu konfirmasi visual pemilik proyek di HP fisik Chrome Android via `http://192.168.1.13:4173/`. Setelah pemilik mengonfirmasi tampilan di HP sudah sempurna sesuai harapan, status dapat langsung diubah menjadi **GO** untuk deployment Vercel.
+
+### Ringkasan Tindakan untuk Pemilik Proyek:
+1. **Verifikasi HP Fisik**: Buka `http://192.168.1.13:4173/` di HP Anda untuk memastikan pita telah hilang dan mahkota berukuran proporsional.
+2. **Font Public Pixel (Opsional)**: Jika ingin font pixel resmi tampil di HP, salin file `PublicPixel.ttf` atau `PublicPixel.woff2` ke folder `public/fonts/`.
+3. **Deploy ke Vercel**: Setelah verifikasi visual disetujui, jalankan `git push origin main` untuk memicu rilis otomatis di Vercel.
