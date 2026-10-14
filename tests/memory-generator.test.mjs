@@ -69,3 +69,29 @@ test('Memory Angka - PRNG Mulberry32 Determinism', () => {
 
     assert.strictEqual(hashInts(10, 20, 30), hashInts(10, 20, 30), 'Hash must be strictly deterministic');
 });
+
+test('Memory Angka - Soft DDA Multiplier Limits (-25% to +25%)', async () => {
+    const { getDdaTimeMultiplier } = await import('../src/games/memory-angka/utils/Difficulty.js');
+
+    // Default / neutral
+    assert.strictEqual(getDdaTimeMultiplier([]), 1.0);
+    assert.strictEqual(getDdaTimeMultiplier([{ success: true }]), 1.0);
+
+    // Failures (mercy boost +15% to +25%)
+    const failHist = [
+        { success: false, mistakes: 2 },
+        { success: false, mistakes: 2 },
+        { success: false, mistakes: 3 }
+    ];
+    const mercyMult = getDdaTimeMultiplier(failHist);
+    assert.ok(mercyMult >= 1.0 && mercyMult <= 1.25, `Mercy multiplier in [1.0, 1.25], got ${mercyMult}`);
+
+    // High mastery (tighten -15% to -20%)
+    const masterHist = [
+        { success: true, mistakes: 0, usedPeek: false, timeRatio: 0.5 },
+        { success: true, mistakes: 0, usedPeek: false, timeRatio: 0.5 },
+        { success: true, mistakes: 0, usedPeek: false, timeRatio: 0.5 }
+    ];
+    const masterMult = getDdaTimeMultiplier(masterHist);
+    assert.ok(masterMult >= 0.75 && masterMult <= 1.0, `Mastery multiplier in [0.75, 1.0], got ${masterMult}`);
+});

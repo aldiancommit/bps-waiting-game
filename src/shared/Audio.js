@@ -30,6 +30,12 @@ export class RetroAudio {
             window.addEventListener('pointerdown', unlock, { passive: true, once: true });
             window.addEventListener('touchstart', unlock, { passive: true, once: true });
             window.addEventListener('keydown', unlock, { passive: true, once: true });
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && this.ctx && this.ctx.state === 'suspended' && !this.isMuted) {
+                    this.ctx.resume().catch(() => {});
+                }
+            });
         }
     }
 
