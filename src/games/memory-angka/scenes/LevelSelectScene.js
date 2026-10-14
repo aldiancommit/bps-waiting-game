@@ -17,6 +17,7 @@ import {
     getMemoryLevelStars,
     getMemoryTotalStars
 } from '../../../shared/Storage.js';
+import { setSceneThemeColor } from '../../../shared/Viewport.js';
 
 export class LevelSelectScene extends Phaser.Scene {
     constructor() {
@@ -36,6 +37,8 @@ export class LevelSelectScene extends Phaser.Scene {
         const dpr = this.game.config.width / 360;
         this.cameras.main.setZoom(dpr);
         this.cameras.main.centerOn(180, 320);
+        this.cameras.main.setBackgroundColor('#F1F5F9');
+        setSceneThemeColor('#F1F5F9', '#F1F5F9');
 
         this.unlockedLevel = Math.max(TOTAL_CAMPAIGN_LEVELS, getMemoryUnlockedLevel());
         this.starsData = getMemoryLevelStars();

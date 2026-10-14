@@ -32,6 +32,7 @@ import {
     getMemoryLevelScores,
     saveMemoryTotalScore
 } from '../../../shared/Storage.js';
+import { setSceneThemeColor } from '../../../shared/Viewport.js';
 
 export class MemoryScene extends Phaser.Scene {
     constructor() {
@@ -57,6 +58,8 @@ export class MemoryScene extends Phaser.Scene {
         const dpr = this.game.config.width / 360;
         this.cameras.main.setZoom(dpr);
         this.cameras.main.centerOn(180, 320);
+        this.cameras.main.setBackgroundColor('#F1F5F9');
+        setSceneThemeColor('#F1F5F9', '#F1F5F9');
 
         // Pre-allocate tile pool (max 5x6 = 30 tiles)
         this.tilePool = [];

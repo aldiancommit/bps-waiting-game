@@ -25,17 +25,19 @@ export class OpeningScene extends Phaser.Scene {
         this.cameras.main.resetFX();
 
         const dpr = this.game.config.width / 360;
+        const H = Math.round(this.game.config.height / dpr);
         this.cameras.main.setZoom(dpr);
-        this.cameras.main.centerOn(180, 320);
+        this.cameras.main.centerOn(180, H / 2);
         this.cameras.main.setBackgroundColor('#F1F5F9');
 
         if (this.textures.exists('opening-game-bps')) {
             this.textures.get('opening-game-bps').setFilter(Phaser.Textures.FilterMode.LINEAR);
         }
 
-        // Render opening image dengan ukuran sama persis seperti main menu (360x640) tanpa ada yang terpotong
-        const splash = this.add.image(180, 320, 'opening-game-bps')
-            .setDisplaySize(360, 640)
+        // Render opening image dalam mode cover (tanpa distorsi) menutup seluruh canvas
+        const coverScale = Math.max(360 / 360, H / 640);
+        const splash = this.add.image(180, H / 2, 'opening-game-bps')
+            .setDisplaySize(360 * coverScale, 640 * coverScale)
             .setAlpha(0);
 
         // Smooth fade-in tween
