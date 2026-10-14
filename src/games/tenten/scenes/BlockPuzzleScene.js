@@ -332,14 +332,14 @@ export class BlockPuzzleScene extends Phaser.Scene {
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
                 this.feverBarGraphics.fillStyle(0xfef08a, 0.55);
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, (trackH - 2) / 2, { tl: 3, tr: 3, bl: 0, br: 0 });
-                this.feverLabel.setText(`🔥 FEVER 2X (${this.feverTurnsLeft} GERAKAN) 🔥`).setColor('#ea580c');
+                this.feverLabel.setText(`FEVER 2X (${this.feverTurnsLeft} GERAKAN)`).setColor('#ea580c');
             } else {
                 // Blue to Amber charging bar
                 this.feverBarGraphics.fillStyle(pct >= 0.8 ? 0xf59e0b : 0x3b82f6, 1);
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, trackH - 2, 3);
                 this.feverBarGraphics.fillStyle(0xffffff, 0.3);
                 this.feverBarGraphics.fillRoundedRect(trackX + 1, trackY + 1, fillW, (trackH - 2) / 2, { tl: 3, tr: 3, bl: 0, br: 0 });
-                this.feverLabel.setText(pct >= 1 ? '⚡ FEVER SIAP! ⚡' : 'FEVER GAUGE').setColor(pct >= 0.8 ? '#d97706' : '#94a3b8');
+                this.feverLabel.setText(pct >= 1 ? 'FEVER SIAP!' : 'FEVER GAUGE').setColor(pct >= 0.8 ? '#d97706' : '#94a3b8');
             }
         } else {
             this.feverLabel.setText('FEVER GAUGE').setColor('#94a3b8');
